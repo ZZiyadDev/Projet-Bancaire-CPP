@@ -11,6 +11,7 @@
     bool CompteCourant::retirer(double montant) {
         if(solde+decouvertAutorise >=montant){
             solde-=montant;
+            enregistrerOperation("Retrait", montant);
             std::cout << "Retrait de " << montant << " effectue. Nouveau solde: " << solde << std::endl;
             return true;
         }

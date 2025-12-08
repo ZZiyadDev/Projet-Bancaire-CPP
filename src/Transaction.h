@@ -16,14 +16,14 @@ class Transaction {
         : type(t), date(d), montant(m) {}
 
     // Getters
-    string getType() const { return type; }
-    string getDate() const { return date; }
+    std::string getType() const { return type; }
+    std::string getDate() const { return date; }
     float getMontant() const { return montant; }
 
     // Display details
     void afficherDetails() const {
     std::cout << "Type: " << type  << ", Montant: " << montant 
-            << ", Date: " << date << endl;
+            << ", Date: " << date << std::endl;
     }
     
 

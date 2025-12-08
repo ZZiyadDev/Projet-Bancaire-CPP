@@ -12,6 +12,7 @@ void CompteEpargne::afficherInfo() const {
 bool CompteEpargne::retirer(double montant) {
     if (montant <= solde) {
         solde -= montant;
+        enregistrerOperation("Retrait", montant);
         std::cout << "Retrait de " << montant << " effectue. Nouveau solde: " << solde << std::endl;
         return true;
     } else {
