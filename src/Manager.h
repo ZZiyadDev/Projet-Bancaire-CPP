@@ -1,6 +1,9 @@
 #ifndef MANAGER_H
 #define MANAGER_H
 
+#pragma once
+
+#include <string>
 #include "Employe.h"
 
 class Manager : public Employe {
@@ -8,15 +11,17 @@ private:
     int nombreEmployes;
 
 public:
-    Manager();
+    Manager() noexcept;
     Manager(int id, const std::string& nom, const std::string& prenom,
-            double salaire, int nombreEmployes);
+            double salaire, int nombreEmployes) noexcept;
 
-    int getNombreEmployes() const;
-    void setNombreEmployes(int nombre);
+    int getNombreEmployes() const noexcept;
+    void setNombreEmployes(int nombre) noexcept;
 
-    void afficher() const override;
-    std::string getRole() const override;
+    void afficher() const noexcept override;
+    std::string getRole() const noexcept override;
+
+    ~Manager() override = default;
 };
 
-#endif
+#endif // MANAGER_H

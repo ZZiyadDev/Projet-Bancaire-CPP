@@ -1,15 +1,20 @@
 #ifndef CAISSIER_H
 #define CAISSIER_H
 
+#pragma once
+
+#include <string>
 #include "Employe.h"
 
 class Caissier : public Employe {
 public:
-    Caissier();
-    Caissier(int id, const std::string& nom, const std::string& prenom, double salaire);
+    Caissier() noexcept;
+    Caissier(int id, const std::string& nom, const std::string& prenom, double salaire) noexcept;
 
-    void afficher() const override;
-    std::string getRole() const override;
+    void afficher() const noexcept override;
+    std::string getRole() const noexcept override;
+
+    ~Caissier() override = default;
 };
 
-#endif
+#endif // CAISSIER_H

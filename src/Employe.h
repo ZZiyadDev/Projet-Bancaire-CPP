@@ -1,6 +1,8 @@
 #ifndef EMPLOYE_H
 #define EMPLOYE_H
 
+#pragma once
+
 #include <string>
 
 class Employe {
@@ -11,24 +13,24 @@ protected:
     double salaire;
 
 public:
-    Employe();
-    Employe(int id, const std::string& nom, const std::string& prenom, double salaire);
+    Employe() noexcept;
+    Employe(int id, const std::string& nom, const std::string& prenom, double salaire) noexcept;
 
     // Getters
-    int getId() const;
-    std::string getNom() const;
-    std::string getPrenom() const;
-    double getSalaire() const;
+    int getId() const noexcept;
+    const std::string& getNom() const noexcept;
+    const std::string& getPrenom() const noexcept;
+    double getSalaire() const noexcept;
 
     // Setters
-    void setSalaire(double salaire);
+    void setSalaire(double salaire) noexcept;
 
     // Virtual methods
-    virtual void afficher() const;
-    virtual std::string getRole() const;
+    virtual void afficher() const noexcept;
+    virtual std::string getRole() const noexcept;
 
-    virtual ~Employe();
+    virtual ~Employe() = default;
 };
 
-#endif
+#endif // EMPLOYE_H
 
