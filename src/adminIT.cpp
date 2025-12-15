@@ -3,9 +3,10 @@
 
 AdminIT::AdminIT() noexcept : Employe(), niveauAcces("user") {}
 
-AdminIT::AdminIT(int id, const std::string& nom, const std::string& prenom,
-                 double salaire, const std::string& niveauAcces) noexcept
-    : Employe(id, nom, prenom, salaire), niveauAcces(niveauAcces) {}
+AdminIT::AdminIT(const std::string& nom, const std::string& prenom,
+                 double salaire, const std::string& niveauAcces,
+                 const std::string& identifiant, const std::string& motDePasse) noexcept
+    : Employe(nom, prenom, salaire, identifiant, motDePasse), niveauAcces(niveauAcces) {}
 
 const std::string& AdminIT::getNiveauAcces() const noexcept {
     return niveauAcces;
@@ -32,3 +33,13 @@ void AdminIT::creerUtilisateur() const noexcept {
 void AdminIT::supprimerUtilisateur() const noexcept {
     std::cout << "Utilisateur supprime par Admin IT." << std::endl;
 }
+
+// Employe
+Employe(int id, const std::string& nom, const std::string& prenom, double salaire,
+        const std::string& identifiant, const std::string& motDePasse);
+
+// Caissier
+Caissier(int id, const std::string& nom, const std::string& prenom, double salaire,
+         const std::string& identifiant, const std::string& motDePasse);
+
+// Similar for AdminIT and Manager

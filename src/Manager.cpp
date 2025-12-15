@@ -3,9 +3,10 @@
 
 Manager::Manager() noexcept : Employe(), nombreEmployes(0) {}
 
-Manager::Manager(int id, const std::string& nom, const std::string& prenom,
-                 double salaire, int nombreEmployes) noexcept
-    : Employe(id, nom, prenom, salaire), nombreEmployes(nombreEmployes) {}
+Manager::Manager(const std::string& nom, const std::string& prenom,
+                 double salaire, int nombreEmployes,
+                 const std::string& identifiant, const std::string& motDePasse) noexcept
+    : Employe(nom, prenom, salaire, identifiant, motDePasse), nombreEmployes(nombreEmployes) {}
 
 int Manager::getNombreEmployes() const noexcept {
     return nombreEmployes;

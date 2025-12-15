@@ -12,8 +12,9 @@ private:
 
 public:
     Manager() noexcept;
-    Manager(int id, const std::string& nom, const std::string& prenom,
-            double salaire, int nombreEmployes) noexcept;
+    Manager(const std::string& nom, const std::string& prenom,
+            double salaire, int nombreEmployes,
+            const std::string& identifiant, const std::string& motDePasse) noexcept;
 
     int getNombreEmployes() const noexcept;
     void setNombreEmployes(int nombre) noexcept;

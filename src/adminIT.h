@@ -12,8 +12,9 @@ private:
 
 public:
     AdminIT() noexcept;
-    AdminIT(int id, const std::string& nom, const std::string& prenom,
-            double salaire, const std::string& niveauAcces) noexcept;
+    AdminIT(const std::string& nom, const std::string& prenom,
+            double salaire, const std::string& niveauAcces,
+            const std::string& identifiant, const std::string& motDePasse) noexcept;
 
     const std::string& getNiveauAcces() const noexcept;
     void setNiveauAcces(const std::string& niveau);

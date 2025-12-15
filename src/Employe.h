@@ -4,30 +4,28 @@
 #pragma once
 
 #include <string>
+#include "Utilisateur.h"
 
-class Employe {
+class Employe : public Utilisateur {
 protected:
-    int id;
-    std::string nom;
-    std::string prenom;
     double salaire;
 
 public:
     Employe() noexcept;
-    Employe(int id, const std::string& nom, const std::string& prenom, double salaire) noexcept;
+    Employe(const std::string& nom, const std::string& prenom, double salaire,
+            const std::string& identifiant, const std::string& motDePasse) noexcept;
 
     // Getters
-    int getId() const noexcept;
-    const std::string& getNom() const noexcept;
-    const std::string& getPrenom() const noexcept;
     double getSalaire() const noexcept;
 
     // Setters
     void setSalaire(double salaire) noexcept;
 
     // Virtual methods
-    virtual void afficher() const noexcept;
-    virtual std::string getRole() const noexcept;
+    virtual void afficher() const noexcept override;
+    virtual std::string getRole() const noexcept override;
+    virtual void afficherProfil() const noexcept override;
+    virtual std::string getTypeUtilisateur() const noexcept override;
 
     virtual ~Employe() = default;
 };

@@ -7,8 +7,6 @@
 
 class Client : public Utilisateur {
 private:
-    std::string nom;
-    std::string prenom;
     std::string dateNaissance;
     std::vector<Compte*> comptes;
 
@@ -18,7 +16,7 @@ public:
            const std::string& n,
            const std::string& p,
            const std::string& dn)
-        : Utilisateur(id, mdp), nom(n), prenom(p), dateNaissance(dn) {}
+        : Utilisateur(id, mdp, n, p), dateNaissance(dn) {}
     
     std::string getTypeUtilisateur() const override {
         return "Client";

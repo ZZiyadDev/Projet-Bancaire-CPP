@@ -2,16 +2,12 @@
 #include "Utilisateur.h"
 
 class Admin : public Utilisateur {
-private:
-    std::string nom;
-    std::string prenom;
-
 public:
     Admin(const std::string& id,
           const std::string& mdp,
           const std::string& n,
           const std::string& p)
-        : Utilisateur(id, mdp), nom(n), prenom(p) {}
+        : Utilisateur(id, mdp, n, p) {}
 
     void afficherProfil() const override {
         std::cout << "\n=== Profil Administrateur ===\n";
