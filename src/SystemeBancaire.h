@@ -3,16 +3,21 @@
 
 #include <vector>
 #include <iostream>
-#include "Client.h"   
-#include "Compte.h"   
+#include <string>
+#include "Client.h"
+#include "Compte.h"
+#include "BDManager.h"
 
 class SystemeBancaire {
 private:
     // Liste globale des clients (Agrégation)
     std::vector<Client> listeClients; 
     
-    // Liste globale des comptes (Agrégation - pour la performance)
+    // Liste globale des comptes (Agrégation)
     std::vector<Compte*> listeComptes; 
+
+    // Helper to generate unique IDs
+    std::string genererIdClient();
 
 public:
     // Constructeur
@@ -21,8 +26,9 @@ public:
     // Méthodes de gestion de haut niveau
     void ajouterNouveauClient(std::string nom, std::string prenom, std::string dateN);
     bool ouvrirNouveauCompte(std::string idClient, std::string typeCompte, double depotInitial);
-    Compte* trouverCompte(std::string identifiant);
+    Compte* trouverCompte(std::string numCompte);
     Client* trouverClient(std::string nom, std::string prenom);
+ Client* trouverClientParId(const std::string& idClient);
 
     // La méthode qui lance l'interface utilisateur
     void operations(); 

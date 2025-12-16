@@ -11,6 +11,7 @@
 
 class Compte{
     protected:
+     std::string numCompte;
         std::string titulaire;
         double solde;
         std::vector <Transaction> historique;
@@ -37,6 +38,7 @@ class Compte{
         
         virtual void afficherHistorique() const;
 
+        const std::string& getNumCompte() const { return numCompte; }
         
         //destructeur virtuel
         virtual ~Compte() {}
