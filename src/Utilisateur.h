@@ -9,6 +9,9 @@ protected:
     std::string nom;
     std::string prenom;
 
+    // Added to allow derived classes (like EmployeClient) to initialize it easily
+    Utilisateur() = default;
+
 public:
     Utilisateur(const std::string& id, const std::string& mdp,
                 const std::string& n, const std::string& p)
@@ -24,11 +27,11 @@ public:
         return identifiant;
     }
 
-    const std::string& getNom() const noexcept {
+    const std::string& getNom() const {
         return nom;
     }
 
-    const std::string& getPrenom() const noexcept {
+    const std::string& getPrenom() const {
         return prenom;
     }
 

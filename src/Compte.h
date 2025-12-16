@@ -15,19 +15,8 @@ class Compte{
         double solde;
         std::vector <Transaction> historique;
 
-        void enregistrerOperation(std::string type, double montant) {
-        // 1. Récupérer la date actuelle automatiquement
-        std::time_t t = std::time(nullptr);
-        std::tm* now = std::localtime(&t);
-        
-        std::stringstream dateStream;
-        dateStream << (now->tm_year + 1900) << '-' 
-                   << (now->tm_mon + 1) << '-'
-                   <<  now->tm_mday;
-        
-        // 2. Créer et ajouter la transaction
-        historique.push_back(Transaction(type, dateStream.str(), montant));
-    }
+        void enregistrerOperation(std::string type, double montant);
+
     public:
         //constructeur
         Compte(std::string t,double sd) : titulaire(t),solde(sd) {}
@@ -46,13 +35,7 @@ class Compte{
 
         virtual bool virementVers(Compte& destinataire, double montant);
         
-        virtual void afficherHistorique() const {
-        std::cout << "\n--- Historique du compte de " << titulaire << " ---" << std::endl;
-        for (const auto& transaction : historique) {
-            transaction.afficherDetails();
-        }
-        std::cout << "-------------------------------------------" << std::endl;
-    }
+        virtual void afficherHistorique() const;
 
         
         //destructeur virtuel

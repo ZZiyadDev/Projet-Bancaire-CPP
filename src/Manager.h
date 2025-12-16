@@ -1,6 +1,3 @@
-#ifndef MANAGER_H
-#define MANAGER_H
-
 #pragma once
 
 #include <string>
@@ -11,18 +8,16 @@ private:
     int nombreEmployes;
 
 public:
-    Manager() noexcept;
+    Manager();
     Manager(const std::string& nom, const std::string& prenom,
             double salaire, int nombreEmployes,
-            const std::string& identifiant, const std::string& motDePasse) noexcept;
+            const std::string& identifiant, const std::string& motDePasse);
 
-    int getNombreEmployes() const noexcept;
-    void setNombreEmployes(int nombre) noexcept;
+    int getNombreEmployes() const;
+    void setNombreEmployes(int nombre);
 
-    void afficher() const noexcept override;
-    std::string getRole() const noexcept override;
+    void afficher() const override;
+    std::string getRole() const override;
 
     ~Manager() override = default;
 };
-
-#endif // MANAGER_H

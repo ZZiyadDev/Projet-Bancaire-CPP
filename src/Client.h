@@ -5,7 +5,7 @@
 #include "Utilisateur.h"
 #include "Compte.h"
 
-class Client : public Utilisateur {
+class Client : virtual public Utilisateur {
 private:
     std::string dateNaissance;
     std::vector<Compte*> comptes;
