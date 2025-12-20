@@ -46,11 +46,66 @@ public:
         return db;
     }
 
+    // Creates the necessary tables if they don't exist
+    bool setupTables() {
+        // 1. Table USERS (Stores Clients, Employees, and Admins)
+        // We merge fields from all child classes into one table for simplicity.
+        // 'type' will be "Client", "Employe", etc.
+        std::string createUsers = 
+            "CREATE TABLE IF NOT EXISTS Users ("
+            "id TEXT PRIMARY KEY, "
+            "mdp TEXT NOT NULL, "
+            "nom TEXT, "
+            "prenom TEXT, "
+            "type TEXT, "           // Discriminiator: 'Client', 'Employe'
+            "dateNaissance TEXT, "  // Specific to Client
+            "salaire REAL, "        // Specific to Employe
+            "role TEXT"             // Specific to Employe (Manager, Caissier)
+            ");";
+
+        // 2. Table COMPTES
+        // Links to a User via userId.
+        std::string createComptes = 
+            "CREATE TABLE IF NOT EXISTS Comptes ("
+            "numCompte TEXT PRIMARY KEY, "
+            "userId TEXT, "
+            "typeCompte TEXT, "     // 'Epargne', 'Courant'
+            "solde REAL, "
+            "taux REAL, "           // Specific to CompteEpargne
+            "decouvert REAL, "      // Specific to CompteCourant
+            "FOREIGN KEY(userId) REFERENCES Users(id)"
+            ");";
+
+        // 3. Table TRANSACTIONS
+        // Links to a Compte via numCompte
+        std::string createTransactions = 
+            "CREATE TABLE IF NOT EXISTS Transactions ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "numCompte TEXT, "
+            "typeOperation TEXT, "  // 'Depot', 'Retrait', 'Virement'
+            "montant REAL, "
+            "date TEXT, "
+            "FOREIGN KEY(numCompte) REFERENCES Comptes(numCompte)"
+            ");";
+
+        // Execute all queries
+        bool success = true;
+        if (!executeQuery(createUsers)) success = false;
+        if (!executeQuery(createComptes)) success = false;
+        if (!executeQuery(createTransactions)) success = false;
+
+        if (success) {
+            std::cout << "[DB] Tables verified/created successfully." << std::endl;
+        } else {
+            std::cerr << "[DB] Error creating tables." << std::endl;
+        }
+        
+        return success;
+    }    
+
     // Destructeur 
     ~BDManager() {
         sqlite3_close(db);
     }
 };
 
-// Initializer le membre statique
-BDManager* BDManager::instance = 0;

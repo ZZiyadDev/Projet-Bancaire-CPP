@@ -1,4 +1,9 @@
 #include "Compte.h"
+#include "BDManager.h"
+#include <ctime>
+#include <sstream>
+
+
 
 
 void Compte::enregistrerOperation(std::string type, double montant) {
@@ -11,8 +16,15 @@ void Compte::enregistrerOperation(std::string type, double montant) {
                    << (now->tm_mon + 1) << '-'
                    <<  now->tm_mday;
         
+        std::string dateStr = dateStream.str();           
         // 2. Créer et ajouter la transaction
         historique.push_back(Transaction(type, dateStream.str(), montant));
+        
+        //3. modifier la base de donnee
+        std::string query = "INSERT INTO Transactions (numCompte, typeOperation, montant, date) VALUES ('"
+                        + numCompte + "', '" + type + "', " + std::to_string(montant) + ", '" + dateStr + "');";
+    
+    BDManager::getInstance()->executeQuery(query);
     }
 
 void Compte::deposer(double montant) {
@@ -20,6 +32,10 @@ void Compte::deposer(double montant) {
         solde += montant;
         enregistrerOperation("Depot", montant);
         std::cout << "Déposé: " << montant << ", Nouveau solde: " << solde << std::endl;
+        std::string query = "UPDATE Comptes SET solde = " + std::to_string(solde) 
+                          + " WHERE numCompte = '" + numCompte + "';";
+        
+        BDManager::getInstance()->executeQuery(query);
     } else {
         std::cout << "Montant de dépôt invalide." << std::endl;
     }

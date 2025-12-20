@@ -39,6 +39,10 @@ class Compte{
         virtual void afficherHistorique() const;
 
         const std::string& getNumCompte() const { return numCompte; }
+
+        void setNumCompte(std::string id) { 
+            this->numCompte = id; 
+        }
         
         //destructeur virtuel
         virtual ~Compte() {}
