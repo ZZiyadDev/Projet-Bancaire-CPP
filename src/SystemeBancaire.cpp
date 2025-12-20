@@ -25,9 +25,9 @@ SystemeBancaire::SystemeBancaire() {
     if (utilisateurs.empty()) {
         std::cout << "[Systeme] Aucune donnee trouvee. Creation de l'Admin par defaut." << std::endl;
         
-        // Création en mémoire
-        Employe* admin = new Employe("Martin", "Sophie", 15000.0, "EMP001", "admin");
-        utilisateurs.push_back(admin);
+        // Création en mémoire avec std::unique_ptr
+        auto admin = std::make_unique<Employe>("Martin", "Sophie", 15000.0, "EMP001", "admin");
+        utilisateurs.push_back(std::move(admin));
 
         // Sauvegarde immédiate en BDD pour la prochaine fois
         // Note: Assurez-vous que la table Users existe (setupTables appelé dans main)
@@ -38,14 +38,7 @@ SystemeBancaire::SystemeBancaire() {
 }
 
 SystemeBancaire::~SystemeBancaire() {
-    nettoyerMemoire();
-}
-
-void SystemeBancaire::nettoyerMemoire() {
-    for (auto u : utilisateurs) delete u;
-    utilisateurs.clear();
-    // Accounts are usually deleted by Clients, but if shared, handle carefully.
-    // For now, we assume Clients own their accounts.
+    // Le nettoyage est maintenant automatique grâce à std::unique_ptr
 }
 
 // --- DATA LOADING (Placeholder for SQL) ---
@@ -67,51 +60,47 @@ void SystemeBancaire::chargerDonnees() {
             if (type == "Client") {
                 const char* dN = (const char*)sqlite3_column_text(stmt, 5);
                 std::string dateN = dN ? dN : "Inconnue";
-                utilisateurs.push_back(new Client(id, mdp, nom, prenom, dateN));
+                utilisateurs.push_back(std::make_unique<Client>(id, mdp, nom, prenom, dateN));
             } 
             else if (type == "Employe") {
                 double salaire = sqlite3_column_double(stmt, 6);
                 const char* roleTxt = (const char*)sqlite3_column_text(stmt, 7);
                 std::string role = roleTxt ? roleTxt : "Employe";
-                utilisateurs.push_back(new Employe(nom, prenom, salaire, id, mdp));
+                utilisateurs.push_back(std::make_unique<Employe>(nom, prenom, salaire, id, mdp));
             }
         }
         sqlite3_finalize(stmt);
     }
 
-    // --- STEP 2: CHARGER LES COMPTES (C'est ici la correction !) ---
+    // --- STEP 2: CHARGER LES COMPTES ---
     const char* qComptes = "SELECT numCompte, userId, typeCompte, solde, taux, decouvert FROM Comptes";
     
     if (sqlite3_prepare_v2(db, qComptes, -1, &stmt, 0) == SQLITE_OK) {
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             std::string num = (const char*)sqlite3_column_text(stmt, 0);
-            std::string userId = (const char*)sqlite3_column_text(stmt, 1); // Lien vers le client
+            std::string userId = (const char*)sqlite3_column_text(stmt, 1);
             std::string type = (const char*)sqlite3_column_text(stmt, 2);
             double solde = sqlite3_column_double(stmt, 3);
 
-            // 1. On cherche le PROPRIÉTAIRE pour avoir son NOM
             Client* proprietaire = trouverClientParId(userId);
 
             if (proprietaire) {
-                // [CORRECTION] On construit le vrai nom "Prénom Nom"
                 std::string nomTitulaire = proprietaire->getPrenom() + " " + proprietaire->getNom();
-
-                Compte* compte = nullptr;
+                std::unique_ptr<Compte> compte = nullptr;
                 
-                // 2. On passe 'nomTitulaire' au constructeur (au lieu de 'num' ou vide)
                 if (type == "Epargne") {
                     double taux = sqlite3_column_double(stmt, 4);
-                    compte = new CompteEpargne(nomTitulaire, solde, taux);
+                    compte = std::make_unique<CompteEpargne>(nomTitulaire, solde, taux);
                 } 
                 else { // Courant ou autre
                     double dec = sqlite3_column_double(stmt, 5);
-                    compte = new CompteCourant(nomTitulaire, solde, dec);
+                    compte = std::make_unique<CompteCourant>(nomTitulaire, solde, dec);
                 }
 
                 if (compte) {
-                    compte->setNumCompte(num); // On remet le vrai ID de la BDD
-                    proprietaire->ajouterCompte(compte); // On le lie au client
-                    listeComptes.push_back(compte);      // On l'ajoute à la liste globale
+                    compte->setNumCompte(num);
+                    proprietaire->ajouterCompte(compte.get()); // Client gets a non-owning raw pointer
+                    listeComptes.push_back(std::move(compte)); // SystemeBancaire owns the account
                 }
             }
         }
@@ -122,9 +111,9 @@ void SystemeBancaire::chargerDonnees() {
 
 // --- AUTHENTICATION ---
 Utilisateur* SystemeBancaire::authentifier(const string& login, const string& pass) {
-    for (Utilisateur* u : utilisateurs) {
+    for (const auto& u : utilisateurs) {
         if (u->getIdentifiant() == login && u->verifierMotDePasse(pass)) {
-            return u;
+            return u.get(); // Return raw pointer for observation
         }
     }
     return nullptr;
@@ -336,16 +325,19 @@ std::string SystemeBancaire::genererIdClient() {
 
 void SystemeBancaire::ajouterNouveauClient(string nom, string prenom, string dateN) {
     string id = genererIdClient();
-    Client* newClient = new Client(id, "1234", nom, prenom, dateN); // Default password
-    
-    utilisateurs.push_back(newClient);
+    auto newClient = std::make_unique<Client>(id, "1234", nom, prenom, dateN); // Default password
     
     // Save to DB
     string query = "INSERT INTO Users (id, mdp, nom, prenom, type, dateNaissance) VALUES ('" 
                    + id + "', '1234', '" + nom + "', '" + prenom + "', 'Client', '" + dateN + "');";
-    BDManager::getInstance()->executeQuery(query);
     
-    cout << "Client cree avec ID : " << id << endl;
+    if (BDManager::getInstance()->executeQuery(query)) {
+        utilisateurs.push_back(std::move(newClient));
+        cout << "Client cree avec ID : " << id << endl;
+    } else {
+        cout << "Erreur SQL: Impossible de creer le client." << endl;
+        // newClient is automatically deleted when it goes out of scope
+    }
 }
 
 bool SystemeBancaire::ouvrirNouveauCompte(std::string idClient, std::string typeCompte, double depotInitial) {
@@ -357,65 +349,55 @@ bool SystemeBancaire::ouvrirNouveauCompte(std::string idClient, std::string type
 
     std::string nomTitulaire = target->getPrenom() + " " + target->getNom();
 
-    // 1. Création de l'objet Compte
-    Compte* compte = nullptr;
+    std::unique_ptr<Compte> compte = nullptr;
     if (typeCompte == "Epargne") 
-        compte = new CompteEpargne(nomTitulaire, depotInitial, 0.05);
+        compte = std::make_unique<CompteEpargne>(nomTitulaire, depotInitial, 0.05);
     else 
-        compte = new CompteCourant(nomTitulaire, depotInitial, 200.0);
+        compte = std::make_unique<CompteCourant>(nomTitulaire, depotInitial, 200.0);
 
     if (compte) {
-        // 2. [IMPORTANT] Générer un ID unique basé sur le temps pour éviter les doublons
-        // Ex: CPT + Timestamp (167822...) + Random (0-999)
         std::string uniqueID = "CPT" + std::to_string(std::time(nullptr)) + std::to_string(rand() % 1000);
         compte->setNumCompte(uniqueID);
 
-        // 3. Tenter l'insertion en Base de Données D'ABORD
         std::string q = "INSERT INTO Comptes (numCompte, userId, typeCompte, solde) VALUES ('"
                    + uniqueID + "', '" + idClient + "', '" + typeCompte + "', " 
                    + std::to_string(depotInitial) + ");";
         
-        // On vérifie si la BDD accepte l'opération
         if (BDManager::getInstance()->executeQuery(q)) {
-            // SUCCÈS : On ajoute seulement maintenant en mémoire
-            target->ajouterCompte(compte);
-            listeComptes.push_back(compte);
+            target->ajouterCompte(compte.get()); // Pass non-owning pointer
+            listeComptes.push_back(std::move(compte)); // Transfer ownership to system
             std::cout << "Compte cree avec succes (ID: " << uniqueID << ")\n";
             return true;
         } else {
-            // ECHEC : On nettoie la mémoire et on signale l'erreur
-            std::cout << "Erreur SQL : Impossible de creer le compte (ID existant ?).\n";
-            delete compte; // On supprime l'objet orphelin
-            return false;
+            std::cout << "Erreur SQL : Impossible de creer le compte.\n";
+            return false; // 'compte' is auto-deleted here
         }
     }
     return false;
 }
 
 Compte* SystemeBancaire::trouverCompte(std::string numCompte) {
-    for (Compte* compte : listeComptes) {
+    for (const auto& compte : listeComptes) {
         if (compte->getNumCompte() == numCompte) {
-            return compte;
+            return compte.get();
         }
     }
     return nullptr;
 }
 
 Client* SystemeBancaire::trouverClientParId(const std::string& idClient) {
-    // CORRECTION : On itère sur des 'Utilisateur*' (pas Client*)
-    for (Utilisateur* u : utilisateurs) {
+    for (const auto& u : utilisateurs) {
         if (u->getIdentifiant() == idClient) {
-            // On essaie de le convertir en Client
-            return dynamic_cast<Client*>(u); 
+            return dynamic_cast<Client*>(u.get()); 
         }
     }
     return nullptr;
 }
 
 Client* SystemeBancaire::trouverClient(std::string nom, std::string prenom) {
-    for (Utilisateur* u : utilisateurs) {
+    for (const auto& u : utilisateurs) {
         if (u->getNom() == nom && u->getPrenom() == prenom) {
-            return dynamic_cast<Client*>(u);
+            return dynamic_cast<Client*>(u.get());
         }
     }
     return nullptr;

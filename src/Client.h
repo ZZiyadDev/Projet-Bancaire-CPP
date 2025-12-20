@@ -43,7 +43,7 @@ public:
     }
 
     ~Client() {
-        for (Compte* c : comptes)
-            delete c;
+        // Les comptes sont maintenant gérés par SystemeBancaire,
+        // le client n'a plus à les supprimer.
     }
 };

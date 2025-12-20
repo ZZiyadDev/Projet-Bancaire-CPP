@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <memory> // Include for std::unique_ptr
 
 // Include your headers
 #include "Utilisateur.h"
@@ -15,17 +16,16 @@
 
 class SystemeBancaire {
 private:
-    // POLYMORPHISM: Stores Clients, Employees, and Admins in one list
-    std::vector<Utilisateur*> utilisateurs; 
+    // POLYMORPHISM: Stores Clients, Employees, and Admins using smart pointers
+    std::vector<std::unique_ptr<Utilisateur>> utilisateurs; 
     
-    // Global list of accounts (for easy searching)
-    std::vector<Compte*> listeComptes; 
+    // Global list of accounts (for easy searching), managed by smart pointers
+    std::vector<std::unique_ptr<Compte>> listeComptes; 
 
     // Internal Helper Methods
     void chargerDonnees(); // Load from DB on startup
-    void nettoyerMemoire();
     
-    // Authentication & Menus (Moved from main.cpp)
+    // Authentication & Menus
     Utilisateur* authentifier(const std::string& login, const std::string& pass);
     void sessionClient(Client* client);
     void sessionEmploye(Employe* employe);
@@ -46,6 +46,7 @@ public:
     void ajouterNouveauClient(std::string nom, std::string prenom, std::string dateN);
     bool ouvrirNouveauCompte(std::string idClient, std::string typeCompte, double depotInitial);
 
+    // Finder methods now return raw pointers for observation (non-owning)
     Compte* trouverCompte(std::string numCompte);
     Client* trouverClient(std::string nom, std::string prenom);
     Client* trouverClientParId(const std::string& idClient);
