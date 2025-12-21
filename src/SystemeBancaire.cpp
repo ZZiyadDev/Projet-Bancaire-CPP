@@ -2,6 +2,7 @@
 #include "CompteEpargne.h"
 #include "CompteCourant.h"
 #include "CompteProfessionnel.h"
+#include "Manager.h"
 #include <limits>
 #include <typeinfo>
 
@@ -19,43 +20,58 @@ void SystemeBancaire::pause() {
 }
 
 // --- CONSTRUCTOR / DESTRUCTOR ---
+
 SystemeBancaire::SystemeBancaire() {
-    cout << "[Systeme] Initialisation..." << endl;
+    std::cout << "[Systeme] Initialisation..." << std::endl;
     chargerDonnees(); // Load users/accounts from SQL
+
     if (utilisateurs.empty()) {
-        std::cout << "[Systeme] Aucune donnee trouvee. Creation de l'Admin par defaut." << std::endl;
-        
-        // Création en mémoire avec std::unique_ptr
-        auto admin = std::make_unique<Employe>("Martin", "Sophie", 15000.0, "EMP001", "admin");
+        std::cout << "[Systeme] Aucune donnee trouvee. Creation de l'Admin et du Manager par defaut." << std::endl;
+
+        // --- Création Admin ---
+        auto admin = std::make_unique<Employe>("Admin", "Root", 20000.0, "EMP001", "admin");
         utilisateurs.push_back(std::move(admin));
 
-        // Sauvegarde immédiate en BDD pour la prochaine fois
-        // Note: Assurez-vous que la table Users existe (setupTables appelé dans main)
-        std::string query = "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
-                            "VALUES ('EMP001', 'admin', 'Martin', 'Sophie', 'Employe', 15000, 'Manager');";
-        BDManager::getInstance()->executeQuery(query);
+        std::string queryAdmin = 
+            "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
+            "VALUES ('EMP001', 'admin', 'Admin', 'Root', 'Employe', 20000, 'Admin');";
+        BDManager::getInstance()->executeQuery(queryAdmin);
+
+        // --- Création Manager ---
+        auto manager = std::make_unique<Manager>("Martin", "Sophie", 15000.0, 0, "MNG001", "manager");
+        utilisateurs.push_back(std::move(manager));
+
+        std::string queryManager = 
+            "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
+            "VALUES ('MNG001', 'manager', 'Martin', 'Sophie', 'Employe', 15000, 'Manager');";
+        BDManager::getInstance()->executeQuery(queryManager);
+
+        std::cout << "[Systeme] Admin et Manager par defaut crees avec succes." << std::endl;
+
     }
 }
 
+
 SystemeBancaire::~SystemeBancaire() {
-    // Le nettoyage est maintenant automatique grâce à std::unique_ptr
+    // Le nettoyage est automatique grâce à std::unique_ptr
 }
 
-// --- DATA LOADING (Placeholder for SQL) ---
+// --- DATA LOADING ---
 void SystemeBancaire::chargerDonnees() {
     std::cout << "[Systeme] Chargement des donnees..." << std::endl;
     sqlite3* db = BDManager::getInstance()->getConnection();
-    sqlite3_stmt* stmt;
+    sqlite3_stmt* stmt = nullptr;
 
-    // --- STEP 1: CHARGER LES UTILISATEURS ---
+    // --- UTILISATEURS ---
     const char* qUsers = "SELECT id, nom, prenom, type, mdp, dateNaissance, salaire, role FROM Users";
-    if (sqlite3_prepare_v2(db, qUsers, -1, &stmt, 0) == SQLITE_OK) {
+    if (sqlite3_prepare_v2(db, qUsers, -1, &stmt, nullptr) == SQLITE_OK) {
         while (sqlite3_step(stmt) == SQLITE_ROW) {
-            std::string id = (const char*)sqlite3_column_text(stmt, 0);
-            std::string nom = (const char*)sqlite3_column_text(stmt, 1);
+
+            std::string id     = (const char*)sqlite3_column_text(stmt, 0);
+            std::string nom    = (const char*)sqlite3_column_text(stmt, 1);
             std::string prenom = (const char*)sqlite3_column_text(stmt, 2);
-            std::string type = (const char*)sqlite3_column_text(stmt, 3);
-            std::string mdp = (const char*)sqlite3_column_text(stmt, 4);
+            std::string type   = (const char*)sqlite3_column_text(stmt, 3);
+            std::string mdp    = (const char*)sqlite3_column_text(stmt, 4);
 
             if (type == "Client") {
                 const char* dN = (const char*)sqlite3_column_text(stmt, 5);
@@ -66,16 +82,27 @@ void SystemeBancaire::chargerDonnees() {
                 double salaire = sqlite3_column_double(stmt, 6);
                 const char* roleTxt = (const char*)sqlite3_column_text(stmt, 7);
                 std::string role = roleTxt ? roleTxt : "Employe";
-                utilisateurs.push_back(std::make_unique<Employe>(nom, prenom, salaire, id, mdp));
+
+                if (role == "Manager") {
+                    utilisateurs.push_back(
+                        std::make_unique<Manager>(nom, prenom, salaire, 0, id, mdp)
+                    );
+                } else {
+                    utilisateurs.push_back(
+                        std::make_unique<Employe>(nom, prenom, salaire, id, mdp)
+                    );
+                }
             }
-        }
+
+        } // end while
         sqlite3_finalize(stmt);
+    } else {
+        std::cout << "[Systeme] Erreur lors de la lecture des utilisateurs.\n";
     }
 
-    // --- STEP 2: CHARGER LES COMPTES ---
+    // --- COMPTES ---
     const char* qComptes = "SELECT numCompte, userId, typeCompte, solde, taux, decouvert FROM Comptes";
-    
-    if (sqlite3_prepare_v2(db, qComptes, -1, &stmt, 0) == SQLITE_OK) {
+    if (sqlite3_prepare_v2(db, qComptes, -1, &stmt, nullptr) == SQLITE_OK) {
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             std::string num = (const char*)sqlite3_column_text(stmt, 0);
             std::string userId = (const char*)sqlite3_column_text(stmt, 1);
@@ -83,25 +110,23 @@ void SystemeBancaire::chargerDonnees() {
             double solde = sqlite3_column_double(stmt, 3);
 
             Client* proprietaire = trouverClientParId(userId);
+            if (!proprietaire) continue;
 
-            if (proprietaire) {
-                std::string nomTitulaire = proprietaire->getPrenom() + " " + proprietaire->getNom();
-                std::unique_ptr<Compte> compte = nullptr;
-                
-                if (type == "Epargne") {
-                    double taux = sqlite3_column_double(stmt, 4);
-                    compte = std::make_unique<CompteEpargne>(nomTitulaire, solde, taux);
-                } 
-                else { // Courant ou autre
-                    double dec = sqlite3_column_double(stmt, 5);
-                    compte = std::make_unique<CompteCourant>(nomTitulaire, solde, dec);
-                }
+            std::string nomTitulaire = proprietaire->getPrenom() + " " + proprietaire->getNom();
+            std::unique_ptr<Compte> compte = nullptr;
 
-                if (compte) {
-                    compte->setNumCompte(num);
-                    proprietaire->ajouterCompte(compte.get()); // Client gets a non-owning raw pointer
-                    listeComptes.push_back(std::move(compte)); // SystemeBancaire owns the account
-                }
+            if (type == "Epargne") {
+                double taux = sqlite3_column_double(stmt, 4);
+                compte = std::make_unique<CompteEpargne>(nomTitulaire, solde, taux);
+            } else {
+                double dec = sqlite3_column_double(stmt, 5);
+                compte = std::make_unique<CompteCourant>(nomTitulaire, solde, dec);
+            }
+
+            if (compte) {
+                compte->setNumCompte(num);
+                proprietaire->ajouterCompte(compte.get());
+                listeComptes.push_back(std::move(compte));
             }
         }
         sqlite3_finalize(stmt);
@@ -146,16 +171,25 @@ void SystemeBancaire::operations() {
             if (auto* client = dynamic_cast<Client*>(user)) {
                 sessionClient(client);
             } 
+            else if (auto* manager = dynamic_cast<Manager*>(user)) {
+                sessionManager(manager); // New: manager-specific session
+            }
             else if (auto* emp = dynamic_cast<Employe*>(user)) {
                 sessionEmploye(emp);
+            } 
+            else {
+                std::cout << "\n[!] Profil non reconnu." << std::endl;
+                pause();
             }
         } else {
             cout << "\n[!] Identifiants incorrects." << endl;
             pause();
         }
     }
-    cout << "Fermeture de l'application." << endl;
+
+    cout << "Fermeture de l'application." << endl; // Moved outside the loop
 }
+
 
 // --- CLIENT SESSION (Logic moved from old main.cpp) ---
 void SystemeBancaire::sessionClient(Client* client) {
@@ -181,7 +215,7 @@ void SystemeBancaire::sessionClient(Client* client) {
 
         // Récupération des comptes du client
         const std::vector<Compte*>& comptes = client->getComptes();
-
+            int choix = -1;
         if (choix == 1) {
             std::cout << "\n--- Vos Comptes ---\n";
             if (comptes.empty()) {
@@ -284,7 +318,7 @@ void SystemeBancaire::sessionClient(Client* client) {
         }
         
         if (choix != 0) pause();
-    } while (choix != 0);
+    } while (choix!= 0);
 }
 
 // --- EMPLOYEE SESSION ---
@@ -402,3 +436,94 @@ Client* SystemeBancaire::trouverClient(std::string nom, std::string prenom) {
     }
     return nullptr;
 }
+
+
+void SystemeBancaire::sessionManager(Manager* manager) {
+    int choix = -1;
+
+    do {
+        clearScreen();
+        std::cout << "=== ESPACE MANAGER : " 
+                  << manager->getPrenom() << " " 
+                  << manager->getNom() << " ===\n";
+        std::cout << "1. Voir la liste des employés\n";
+        std::cout << "2. Ajuster le salaire d'un employé\n";
+        std::cout << "3. Voir tous les clients\n";
+        std::cout << "0. Deconnexion\n";
+        std::cout << "Votre choix : ";
+
+        if (!(std::cin >> choix)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            continue;
+        }
+
+        switch (choix) {
+
+            case 1: {
+                std::cout << "\n--- Liste des Employes ---\n";
+                for (const auto& u : utilisateurs) {
+                    if (auto* emp = dynamic_cast<Employe*>(u.get())) {
+                        emp->afficher();
+                    }
+                }
+                pause();
+                break;
+            }
+
+            case 2: {
+                std::string id;
+                double nouveauSalaire;
+
+                std::cout << "ID de l'employé à modifier : ";
+                std::cin >> id;
+
+                Employe* empTrouve = nullptr;
+
+                for (auto& u : utilisateurs) {
+                    if (auto* emp = dynamic_cast<Employe*>(u.get())) {
+                        if (emp->getIdentifiant() == id) {
+                            empTrouve = emp;
+                            break;
+                        }
+                    }
+                }
+
+                if (empTrouve) {
+                    std::cout << "Salaire actuel : " 
+                              << empTrouve->getSalaire() << " MAD\n";
+                    std::cout << "Nouveau salaire : ";
+                    std::cin >> nouveauSalaire;
+                    empTrouve->setSalaire(nouveauSalaire);
+                    std::cout << "Salaire mis à jour !\n";
+                } else {
+                    std::cout << "Employé introuvable.\n";
+                }
+
+                pause();
+                break;
+            }
+
+            case 3: {
+                std::cout << "\n--- Liste des Clients ---\n";
+                for (const auto& u : utilisateurs) {
+                    if (auto* client = dynamic_cast<Client*>(u.get())) {
+                        client->afficherProfil();
+                    }
+                }
+                pause();
+                break;
+            }
+
+            case 0:
+                std::cout << "Deconnexion du manager...\n";
+                break;
+
+            default:
+                std::cout << "Choix invalide.\n";
+                pause();
+        }
+
+    } while (choix != 0);
+}
+

@@ -12,6 +12,7 @@
 #include "Client.h"
 #include "Employe.h"
 #include "Compte.h"
+#include "Manager.h"
 #include "BDManager.h"
 
 class SystemeBancaire {
@@ -29,7 +30,7 @@ private:
     Utilisateur* authentifier(const std::string& login, const std::string& pass);
     void sessionClient(Client* client);
     void sessionEmploye(Employe* employe);
-    
+    void sessionManager(Manager* manager);
     // Utilities
     std::string genererIdClient();
     void clearScreen();

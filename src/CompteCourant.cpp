@@ -5,7 +5,7 @@
     void CompteCourant::afficherInfo() const  {
     std::cout << "Compte Courant - Titulaire: " << titulaire 
               << ", Solde: " << solde 
-              << ", Découvert Autorisé: " << decouvertAutorise 
+              << ", Decouvert Autorise: " << decouvertAutorise 
               << std::endl;
     }
     
