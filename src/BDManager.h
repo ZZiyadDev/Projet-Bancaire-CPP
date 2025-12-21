@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 #include "sqlite3.h"
 
 class BDManager {
@@ -38,6 +39,39 @@ public:
             sqlite3_free(zErrMsg);
             return false;
         }
+        return true;
+    }
+
+    // Executes a prepared statement with bound parameters to prevent SQL injection
+    bool executePrepared(const std::string& query, const std::vector<std::string>& params) {
+        sqlite3_stmt* stmt = nullptr;
+        // 1. Prepare the statement
+        if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            std::cerr << "SQL Error (prepare): " << sqlite3_errmsg(db) << std::endl;
+            return false;
+        }
+
+        // 2. Bind parameters
+        for (size_t i = 0; i < params.size(); ++i) {
+            // Bind value at i-th position to the (i+1)-th '?' in the query
+            if (sqlite3_bind_text(stmt, i + 1, params[i].c_str(), -1, SQLITE_STATIC) != SQLITE_OK) {
+                std::cerr << "SQL Error (bind): " << sqlite3_errmsg(db) << std::endl;
+                sqlite3_finalize(stmt);
+                return false;
+            }
+        }
+
+        // 3. Execute the statement
+        int rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            // This is expected for SELECT, but for INSERT/UPDATE/DELETE it's an error
+            std::cerr << "SQL Error (step): " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_finalize(stmt);
+            return false;
+        }
+
+        // 4. Finalize
+        sqlite3_finalize(stmt);
         return true;
     }
 

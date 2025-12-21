@@ -1,7 +1,10 @@
 #pragma once
 
 #include <string>
+#include <memory>
 #include "Employe.h"
+
+class Utilisateur; // Forward declaration
 
 class AdminIT : public Employe {
 private:
@@ -20,8 +23,8 @@ public:
     std::string getRole() const override;
 
     // IT-specific actions
-    void creerUtilisateur() const;
-    void supprimerUtilisateur() const;
+    std::unique_ptr<Utilisateur> creerUtilisateur();
+    std::string supprimerUtilisateur() const;
 
     ~AdminIT() override = default;
 };

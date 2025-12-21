@@ -3,8 +3,10 @@
 #include "CompteCourant.h"
 #include "CompteProfessionnel.h"
 #include "Manager.h"
+#include "AdminIT.h"
 #include <limits>
 #include <typeinfo>
+#include <algorithm>
 
 using namespace std;
 
@@ -22,43 +24,43 @@ void SystemeBancaire::pause() {
 // --- CONSTRUCTOR / DESTRUCTOR ---
 
 SystemeBancaire::SystemeBancaire() {
-    std::cout << "[Systeme] Initialisation..." << std::endl;
+    cout << "[Systeme] Initialisation..." << endl;
     chargerDonnees(); // Load users/accounts from SQL
 
     if (utilisateurs.empty()) {
-        std::cout << "[Systeme] Aucune donnee trouvee. Creation de l'Admin et du Manager par defaut." << std::endl;
+        cout << "[Systeme] Aucune donnee trouvee. Creation de l'Admin et du Manager par defaut." << endl;
 
         // --- Création Admin ---
-        auto admin = std::make_unique<Employe>("Admin", "Root", 20000.0, "EMP001", "admin");
-        utilisateurs.push_back(std::move(admin));
+        auto admin = make_unique<AdminIT>("Admin", "Root", 20000.0, "RootAccess", "EMP001", "admin");
+        utilisateurs.push_back(move(admin));
 
-        std::string queryAdmin = 
+        string queryAdmin = 
             "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
             "VALUES ('EMP001', 'admin', 'Admin', 'Root', 'Employe', 20000, 'Admin');";
         BDManager::getInstance()->executeQuery(queryAdmin);
 
         // --- Création Manager ---
-        auto manager = std::make_unique<Manager>("Martin", "Sophie", 15000.0, 0, "MNG001", "manager");
-        utilisateurs.push_back(std::move(manager));
+        auto manager = make_unique<Manager>("Martin", "Sophie", 15000.0, 0, "MNG001", "manager");
+        utilisateurs.push_back(move(manager));
 
-        std::string queryManager = 
+        string queryManager = 
             "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
             "VALUES ('MNG001', 'manager', 'Martin', 'Sophie', 'Employe', 15000, 'Manager');";
         BDManager::getInstance()->executeQuery(queryManager);
 
-        std::cout << "[Systeme] Admin et Manager par defaut crees avec succes." << std::endl;
+        cout << "[Systeme] Admin et Manager par defaut crees avec succes." << endl;
 
     }
 }
 
 
 SystemeBancaire::~SystemeBancaire() {
-    // Le nettoyage est automatique grâce à std::unique_ptr
+    // Le nettoyage est automatique grâce à unique_ptr
 }
 
 // --- DATA LOADING ---
 void SystemeBancaire::chargerDonnees() {
-    std::cout << "[Systeme] Chargement des donnees..." << std::endl;
+    cout << "[Systeme] Chargement des donnees..." << endl;
     sqlite3* db = BDManager::getInstance()->getConnection();
     sqlite3_stmt* stmt = nullptr;
 
@@ -67,66 +69,74 @@ void SystemeBancaire::chargerDonnees() {
     if (sqlite3_prepare_v2(db, qUsers, -1, &stmt, nullptr) == SQLITE_OK) {
         while (sqlite3_step(stmt) == SQLITE_ROW) {
 
-            std::string id     = (const char*)sqlite3_column_text(stmt, 0);
-            std::string nom    = (const char*)sqlite3_column_text(stmt, 1);
-            std::string prenom = (const char*)sqlite3_column_text(stmt, 2);
-            std::string type   = (const char*)sqlite3_column_text(stmt, 3);
-            std::string mdp    = (const char*)sqlite3_column_text(stmt, 4);
+            string id     = (const char*)sqlite3_column_text(stmt, 0);
+            string nom    = (const char*)sqlite3_column_text(stmt, 1);
+            string prenom = (const char*)sqlite3_column_text(stmt, 2);
+            string type   = (const char*)sqlite3_column_text(stmt, 3);
+            string mdp    = (const char*)sqlite3_column_text(stmt, 4);
 
             if (type == "Client") {
                 const char* dN = (const char*)sqlite3_column_text(stmt, 5);
-                std::string dateN = dN ? dN : "Inconnue";
-                utilisateurs.push_back(std::make_unique<Client>(id, mdp, nom, prenom, dateN));
+                string dateN = dN ? dN : "Inconnue";
+                utilisateurs.push_back(make_unique<Client>(id, mdp, nom, prenom, dateN));
             } 
             else if (type == "Employe") {
                 double salaire = sqlite3_column_double(stmt, 6);
                 const char* roleTxt = (const char*)sqlite3_column_text(stmt, 7);
-                std::string role = roleTxt ? roleTxt : "Employe";
+                string role = roleTxt ? roleTxt : "Employe";
 
-                if (role == "Manager") {
-                    utilisateurs.push_back(
-                        std::make_unique<Manager>(nom, prenom, salaire, 0, id, mdp)
-                    );
-                } else {
-                    utilisateurs.push_back(
-                        std::make_unique<Employe>(nom, prenom, salaire, id, mdp)
-                    );
-                }
+            if (role == "Admin") {
+            // We create an AdminIT object. 
+            // Note: Your constructor requires 'niveauAcces'. We'll pass "SuperUser" or the role.
+            utilisateurs.push_back(
+            make_unique<AdminIT>(nom, prenom, salaire, "SuperUser", id, mdp)
+            );
+            }
+            else if (role == "Manager") {
+            utilisateurs.push_back(
+            make_unique<Manager>(nom, prenom, salaire, 0, id, mdp)
+            );
+            } 
+            else {
+            utilisateurs.push_back(
+            make_unique<Employe>(nom, prenom, salaire, id, mdp)
+            );
+            }
             }
 
         } // end while
         sqlite3_finalize(stmt);
     } else {
-        std::cout << "[Systeme] Erreur lors de la lecture des utilisateurs.\n";
+        cout << "[Systeme] Erreur lors de la lecture des utilisateurs.\n";
     }
 
     // --- COMPTES ---
     const char* qComptes = "SELECT numCompte, userId, typeCompte, solde, taux, decouvert FROM Comptes";
     if (sqlite3_prepare_v2(db, qComptes, -1, &stmt, nullptr) == SQLITE_OK) {
         while (sqlite3_step(stmt) == SQLITE_ROW) {
-            std::string num = (const char*)sqlite3_column_text(stmt, 0);
-            std::string userId = (const char*)sqlite3_column_text(stmt, 1);
-            std::string type = (const char*)sqlite3_column_text(stmt, 2);
+            string num = (const char*)sqlite3_column_text(stmt, 0);
+            string userId = (const char*)sqlite3_column_text(stmt, 1);
+            string type = (const char*)sqlite3_column_text(stmt, 2);
             double solde = sqlite3_column_double(stmt, 3);
 
             Client* proprietaire = trouverClientParId(userId);
             if (!proprietaire) continue;
 
-            std::string nomTitulaire = proprietaire->getPrenom() + " " + proprietaire->getNom();
-            std::unique_ptr<Compte> compte = nullptr;
+            string nomTitulaire = proprietaire->getPrenom() + " " + proprietaire->getNom();
+            unique_ptr<Compte> compte = nullptr;
 
             if (type == "Epargne") {
                 double taux = sqlite3_column_double(stmt, 4);
-                compte = std::make_unique<CompteEpargne>(nomTitulaire, solde, taux);
+                compte = make_unique<CompteEpargne>(nomTitulaire, solde, taux);
             } else {
                 double dec = sqlite3_column_double(stmt, 5);
-                compte = std::make_unique<CompteCourant>(nomTitulaire, solde, dec);
+                compte = make_unique<CompteCourant>(nomTitulaire, solde, dec);
             }
 
             if (compte) {
                 compte->setNumCompte(num);
                 proprietaire->ajouterCompte(compte.get());
-                listeComptes.push_back(std::move(compte));
+                listeComptes.push_back(move(compte));
             }
         }
         sqlite3_finalize(stmt);
@@ -135,10 +145,11 @@ void SystemeBancaire::chargerDonnees() {
 
 
 // --- AUTHENTICATION ---
+// Replace the existing authentifier method with this temporarily
 Utilisateur* SystemeBancaire::authentifier(const string& login, const string& pass) {
     for (const auto& u : utilisateurs) {
         if (u->getIdentifiant() == login && u->verifierMotDePasse(pass)) {
-            return u.get(); // Return raw pointer for observation
+            return u.get();
         }
     }
     return nullptr;
@@ -167,27 +178,35 @@ void SystemeBancaire::operations() {
 
         if (user) {
             cout << "\nConnexion reussie : " << user->getPrenom() << " " << user->getNom() << endl;
-            // Polymorphic Dispatch
-            if (auto* client = dynamic_cast<Client*>(user)) {
-                sessionClient(client);
-            } 
-            else if (auto* manager = dynamic_cast<Manager*>(user)) {
-                sessionManager(manager); // New: manager-specific session
+
+            // 1. Check for ADMIN IT
+            if (auto* admin = dynamic_cast<AdminIT*>(user)) {
+                sessionAdmin(admin); 
             }
+            // 2. Check for MANAGER
+            else if (auto* manager = dynamic_cast<Manager*>(user)) {
+                sessionManager(manager);
+            }
+            // 3. Check for CLIENT
+            else if (auto* client = dynamic_cast<Client*>(user)) {
+                sessionClient(client);
+            }
+            // 4. Check for EMPLOYE (Default fallback)
             else if (auto* emp = dynamic_cast<Employe*>(user)) {
                 sessionEmploye(emp);
-            } 
-            else {
-                std::cout << "\n[!] Profil non reconnu." << std::endl;
-                pause();
             }
+            else {
+                 cout << "Erreur: Type d'utilisateur inconnu." << endl;
+                 pause();
+            }
+
         } else {
+            // This 'else' belongs to 'if (user)'
             cout << "\n[!] Identifiants incorrects." << endl;
             pause();
         }
     }
-
-    cout << "Fermeture de l'application." << endl; // Moved outside the loop
+    cout << "Fermeture de l'application." << endl;
 }
 
 
@@ -197,49 +216,49 @@ void SystemeBancaire::sessionClient(Client* client) {
     do {
         clearScreen();
         // Affichage du menu amélioré
-        std::cout << "=== ESPACE CLIENT : " << client->getPrenom() << " " << client->getNom() << " ===\n";
-        std::cout << "1. Voir mes Comptes\n";
-        std::cout << "2. Faire un Depot\n";
-        std::cout << "3. Faire un Retrait\n";
-        std::cout << "4. Faire un Virement\n";
-        std::cout << "5. Consulter l'Historique\n";
-        std::cout << "0. Deconnexion\n";
-        std::cout << "Choix : ";
+        cout << "=== ESPACE CLIENT : " << client->getPrenom() << " " << client->getNom() << " ===\n";
+        cout << "1. Voir mes Comptes\n";
+        cout << "2. Faire un Depot\n";
+        cout << "3. Faire un Retrait\n";
+        cout << "4. Faire un Virement\n";
+        cout << "5. Consulter l'Historique\n";
+        cout << "0. Deconnexion\n";
+        cout << "Choix : ";
         
         // Sécurisation de l'entrée (évite les bugs si on tape une lettre)
-        if (!(std::cin >> choix)) {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        if (!(cin >> choix)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
             continue;
         }
 
         // Récupération des comptes du client
-        const std::vector<Compte*>& comptes = client->getComptes();
-            int choix = -1;
+        const vector<Compte*>& comptes = client->getComptes();
+
         if (choix == 1) {
-            std::cout << "\n--- Vos Comptes ---\n";
+            cout << "\n--- Vos Comptes ---\n";
             if (comptes.empty()) {
-                std::cout << "Aucun compte actif.\n";
+                cout << "Aucun compte actif.\n";
             } else {
                 for (size_t i = 0; i < comptes.size(); ++i) {
-                    std::cout << "Compte n°" << (i + 1) << " : ";
+                    cout << "Compte n°" << (i + 1) << " : ";
                     comptes[i]->afficherInfo(); 
                 }
             }
         }
         else if (choix == 2 || choix == 3) { // DEPOT ou RETRAIT
             if (comptes.empty()) {
-                std::cout << "Erreur : Vous n'avez aucun compte.\n";
+                cout << "Erreur : Vous n'avez aucun compte.\n";
             } else {
                 int index = 0;
-                std::cout << "\nSur quel compte ? (Entrez le numero 1, 2...) : ";
-                std::cin >> index;
+                cout << "\nSur quel compte ? (Entrez le numero 1, 2...) : ";
+                cin >> index;
                 
                 // Vérification que le numéro est valide
                 if (index > 0 && index <= (int)comptes.size()) {
                     double montant;
-                    std::cout << "Montant : ";
-                    std::cin >> montant;
+                    cout << "Montant : ";
+                    cin >> montant;
                     
                     if (choix == 2) {
                         // Action DEPOT
@@ -248,38 +267,38 @@ void SystemeBancaire::sessionClient(Client* client) {
                         // Action RETRAIT
                         // La méthode retirer() renvoie false si solde insuffisant
                         if (comptes[index - 1]->retirer(montant)) {
-                            std::cout << "Retrait effectue avec succes.\n";
+                            cout << "Retrait effectue avec succes.\n";
                         } else {
-                            std::cout << "Erreur : Solde insuffisant ou montant invalide.\n";
+                            cout << "Erreur : Solde insuffisant ou montant invalide.\n";
                         }
                     }
                 } else {
-                    std::cout << "Numero de compte invalide.\n";
+                    cout << "Numero de compte invalide.\n";
                 }
             }
         }
         else if (choix == 4) { // VIREMENT
             if (comptes.empty()) {
-                std::cout << "Erreur : Il vous faut un compte source.\n";
+                cout << "Erreur : Il vous faut un compte source.\n";
             } else {
                 // 1. Choisir le compte source
                 int indexSrc = 0;
-                std::cout << "Depuis quel compte ? (1-" << comptes.size() << ") : ";
-                std::cin >> indexSrc;
+                cout << "Depuis quel compte ? (1-" << comptes.size() << ") : ";
+                cin >> indexSrc;
                 
                 if (indexSrc > 0 && indexSrc <= (int)comptes.size()) {
                     // 2. Choisir le destinataire (ID du compte, ex: "CPT_123")
-                    std::string destID;
-                    std::cout << "ID du compte destinataire : ";
-                    std::cin >> destID;
+                    string destID;
+                    cout << "ID du compte destinataire : ";
+                    cin >> destID;
                     
                     // On cherche le compte destinataire dans TOUTE la banque
                     Compte* destCompte = trouverCompte(destID); // Utilise la méthode de SystemeBancaire
 
                     if (destCompte != nullptr) {
                         double montant;
-                        std::cout << "Montant du virement : ";
-                        std::cin >> montant;
+                        cout << "Montant du virement : ";
+                        cin >> montant;
                         
                         // Exécution du virement
                         if (comptes[indexSrc - 1]->virementVers(*destCompte, montant)) {
@@ -287,32 +306,32 @@ void SystemeBancaire::sessionClient(Client* client) {
                             // mais on peut confirmer ici si besoin.
                         }
                     } else {
-                        std::cout << "Erreur : Compte destinataire introuvable.\n";
+                        cout << "Erreur : Compte destinataire introuvable.\n";
                     }
                 } else {
-                     std::cout << "Compte source invalide.\n";
+                     cout << "Compte source invalide.\n";
                 }
             }
         }
         if (choix == 5) {
             if (comptes.empty()) {
-                std::cout << "Aucun compte disponible.\n";
+                cout << "Aucun compte disponible.\n";
             } else {
-                std::cout << "\n--- Choix du Compte pour Historique ---\n";
+                cout << "\n--- Choix du Compte pour Historique ---\n";
                 for (size_t i = 0; i < comptes.size(); ++i) {
                     // CORRECTION ICI : On utilise afficherInfo() au lieu de getType()
-                    std::cout << (i + 1) << ". "; 
+                    cout << (i + 1) << ". "; 
                     comptes[i]->afficherInfo(); 
                 }
                 
                 int index = 0;
-                std::cout << "Votre choix : ";
-                std::cin >> index;
+                cout << "Votre choix : ";
+                cin >> index;
 
                 if (index > 0 && index <= (int)comptes.size()) {
                     comptes[index - 1]->afficherHistorique();
                 } else {
-                    std::cout << "Compte invalide.\n";
+                    cout << "Compte invalide.\n";
                 }
             }
         }
@@ -353,64 +372,76 @@ void SystemeBancaire::sessionEmploye(Employe* employe) {
 }
 
 // --- CREATION METHODS ---
-std::string SystemeBancaire::genererIdClient() {
-    return "CLI" + std::to_string(utilisateurs.size() + 1);
+string SystemeBancaire::genererIdClient() {
+    return "CLI" + to_string(utilisateurs.size() + 1);
 }
 
 void SystemeBancaire::ajouterNouveauClient(string nom, string prenom, string dateN) {
     string id = genererIdClient();
-    auto newClient = std::make_unique<Client>(id, "1234", nom, prenom, dateN); // Default password
+    string defaultPassword = "1234";
     
-    // Save to DB
-    string query = "INSERT INTO Users (id, mdp, nom, prenom, type, dateNaissance) VALUES ('" 
-                   + id + "', '1234', '" + nom + "', '" + prenom + "', 'Client', '" + dateN + "');";
-    
-    if (BDManager::getInstance()->executeQuery(query)) {
-        utilisateurs.push_back(std::move(newClient));
-        cout << "Client cree avec ID : " << id << endl;
+    // Save to DB securely
+    string query = "INSERT INTO Users (id, mdp, nom, prenom, type, dateNaissance) VALUES (?, ?, ?, ?, 'Client', ?);";
+    vector<string> params = {id, defaultPassword, nom, prenom, dateN};
+
+    if (BDManager::getInstance()->executePrepared(query, params)) {
+        // Also add to in-memory vector
+        auto newClient = make_unique<Client>(id, defaultPassword, nom, prenom, dateN);
+        utilisateurs.push_back(move(newClient));
+        cout << "Client cree avec succes. ID : " << id << endl;
     } else {
         cout << "Erreur SQL: Impossible de creer le client." << endl;
-        // newClient is automatically deleted when it goes out of scope
     }
 }
 
-bool SystemeBancaire::ouvrirNouveauCompte(std::string idClient, std::string typeCompte, double depotInitial) {
+bool SystemeBancaire::ouvrirNouveauCompte(string idClient, string typeCompte, double depotInitial) {
     Client* target = trouverClientParId(idClient);
     if (!target) {
-        std::cout << "Client introuvable.\n";
+        cout << "Client introuvable.\n";
         return false;
     }
 
-    std::string nomTitulaire = target->getPrenom() + " " + target->getNom();
+    string nomTitulaire = target->getPrenom() + " " + target->getNom();
 
-    std::unique_ptr<Compte> compte = nullptr;
+    unique_ptr<Compte> compte = nullptr;
     if (typeCompte == "Epargne") 
-        compte = std::make_unique<CompteEpargne>(nomTitulaire, depotInitial, 0.05);
+        compte = make_unique<CompteEpargne>(nomTitulaire, depotInitial, 0.05);
     else 
-        compte = std::make_unique<CompteCourant>(nomTitulaire, depotInitial, 200.0);
+        compte = make_unique<CompteCourant>(nomTitulaire, depotInitial, 200.0);
 
     if (compte) {
-        std::string uniqueID = "CPT" + std::to_string(std::time(nullptr)) + std::to_string(rand() % 1000);
+        string uniqueID = "CPT" + to_string(time(nullptr)) + to_string(rand() % 1000);
         compte->setNumCompte(uniqueID);
 
-        std::string q = "INSERT INTO Comptes (numCompte, userId, typeCompte, solde) VALUES ('"
-                   + uniqueID + "', '" + idClient + "', '" + typeCompte + "', " 
-                   + std::to_string(depotInitial) + ");";
+        string q = "INSERT INTO Comptes (numCompte, userId, typeCompte, solde, taux, decouvert) VALUES (?, ?, ?, ?, ?, ?);";
         
-        if (BDManager::getInstance()->executeQuery(q)) {
+        // Prepare parameters based on account type
+        double taux = (typeCompte == "Epargne") ? 0.05 : 0.0;
+        double decouvert = (typeCompte == "Courant") ? 200.0 : 0.0;
+
+        vector<string> params = {
+            uniqueID,
+            idClient,
+            typeCompte,
+            to_string(depotInitial),
+            to_string(taux),
+            to_string(decouvert)
+        };
+        
+        if (BDManager::getInstance()->executePrepared(q, params)) {
             target->ajouterCompte(compte.get()); // Pass non-owning pointer
-            listeComptes.push_back(std::move(compte)); // Transfer ownership to system
-            std::cout << "Compte cree avec succes (ID: " << uniqueID << ")\n";
+            listeComptes.push_back(move(compte)); // Transfer ownership to system
+            cout << "Compte cree avec succes (ID: " << uniqueID << ")\n";
             return true;
         } else {
-            std::cout << "Erreur SQL : Impossible de creer le compte.\n";
-            return false; // 'compte' is auto-deleted here
+            cout << "Erreur SQL : Impossible de creer le compte.\n";
+            return false;
         }
     }
     return false;
 }
 
-Compte* SystemeBancaire::trouverCompte(std::string numCompte) {
+Compte* SystemeBancaire::trouverCompte(string numCompte) {
     for (const auto& compte : listeComptes) {
         if (compte->getNumCompte() == numCompte) {
             return compte.get();
@@ -419,7 +450,7 @@ Compte* SystemeBancaire::trouverCompte(std::string numCompte) {
     return nullptr;
 }
 
-Client* SystemeBancaire::trouverClientParId(const std::string& idClient) {
+Client* SystemeBancaire::trouverClientParId(const string& idClient) {
     for (const auto& u : utilisateurs) {
         if (u->getIdentifiant() == idClient) {
             return dynamic_cast<Client*>(u.get()); 
@@ -428,7 +459,7 @@ Client* SystemeBancaire::trouverClientParId(const std::string& idClient) {
     return nullptr;
 }
 
-Client* SystemeBancaire::trouverClient(std::string nom, std::string prenom) {
+Client* SystemeBancaire::trouverClient(string nom, string prenom) {
     for (const auto& u : utilisateurs) {
         if (u->getNom() == nom && u->getPrenom() == prenom) {
             return dynamic_cast<Client*>(u.get());
@@ -443,25 +474,25 @@ void SystemeBancaire::sessionManager(Manager* manager) {
 
     do {
         clearScreen();
-        std::cout << "=== ESPACE MANAGER : " 
+        cout << "=== ESPACE MANAGER : " 
                   << manager->getPrenom() << " " 
                   << manager->getNom() << " ===\n";
-        std::cout << "1. Voir la liste des employés\n";
-        std::cout << "2. Ajuster le salaire d'un employé\n";
-        std::cout << "3. Voir tous les clients\n";
-        std::cout << "0. Deconnexion\n";
-        std::cout << "Votre choix : ";
+        cout << "1. Voir la liste des employés\n";
+        cout << "2. Ajuster le salaire d'un employé\n";
+        cout << "3. Voir tous les clients\n";
+        cout << "0. Deconnexion\n";
+        cout << "Votre choix : ";
 
-        if (!(std::cin >> choix)) {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        if (!(cin >> choix)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
             continue;
         }
 
         switch (choix) {
 
             case 1: {
-                std::cout << "\n--- Liste des Employes ---\n";
+                cout << "\n--- Liste des Employes ---\n";
                 for (const auto& u : utilisateurs) {
                     if (auto* emp = dynamic_cast<Employe*>(u.get())) {
                         emp->afficher();
@@ -472,11 +503,11 @@ void SystemeBancaire::sessionManager(Manager* manager) {
             }
 
             case 2: {
-                std::string id;
+                string id;
                 double nouveauSalaire;
 
-                std::cout << "ID de l'employé à modifier : ";
-                std::cin >> id;
+                cout << "ID de l'employé à modifier : ";
+                cin >> id;
 
                 Employe* empTrouve = nullptr;
 
@@ -490,14 +521,14 @@ void SystemeBancaire::sessionManager(Manager* manager) {
                 }
 
                 if (empTrouve) {
-                    std::cout << "Salaire actuel : " 
+                    cout << "Salaire actuel : " 
                               << empTrouve->getSalaire() << " MAD\n";
-                    std::cout << "Nouveau salaire : ";
-                    std::cin >> nouveauSalaire;
+                    cout << "Nouveau salaire : ";
+                    cin >> nouveauSalaire;
                     empTrouve->setSalaire(nouveauSalaire);
-                    std::cout << "Salaire mis à jour !\n";
+                    cout << "Salaire mis à jour !\n";
                 } else {
-                    std::cout << "Employé introuvable.\n";
+                    cout << "Employé introuvable.\n";
                 }
 
                 pause();
@@ -505,7 +536,7 @@ void SystemeBancaire::sessionManager(Manager* manager) {
             }
 
             case 3: {
-                std::cout << "\n--- Liste des Clients ---\n";
+                cout << "\n--- Liste des Clients ---\n";
                 for (const auto& u : utilisateurs) {
                     if (auto* client = dynamic_cast<Client*>(u.get())) {
                         client->afficherProfil();
@@ -516,14 +547,64 @@ void SystemeBancaire::sessionManager(Manager* manager) {
             }
 
             case 0:
-                std::cout << "Deconnexion du manager...\n";
+                cout << "Deconnexion du manager...\n";
                 break;
 
             default:
-                std::cout << "Choix invalide.\n";
+                cout << "Choix invalide.\n";
                 pause();
         }
 
+    } while (choix != 0);
+}
+
+void SystemeBancaire::sessionAdmin(AdminIT* admin) {
+    int choix = -1;
+    do {
+        clearScreen();
+        cout << "=== CONSOLE ADMIN IT (" << admin->getNiveauAcces() << ") ===\n";
+        cout << "1. Creer un nouvel utilisateur (Employe/Manager)\n";
+        cout << "2. Supprimer un utilisateur\n";
+        cout << "3. Voir tous les logs (Debug)\n";
+        cout << "0. Deconnexion\n";
+        cout << "Choix : ";
+        cin >> choix;
+
+        switch(choix) {
+            case 1: {
+                auto nouvelUtilisateur = admin->creerUtilisateur();
+                if (nouvelUtilisateur) {
+                    utilisateurs.push_back(std::move(nouvelUtilisateur));
+                    cout << "Confirmation: Utilisateur ajoute au systeme en memoire." << endl;
+                } else {
+                    cout << "L'operation de creation a echoue ou a ete annulee." << endl;
+                }
+                pause();
+                break;
+            }
+            case 2: {
+                std::string idASupprimer = admin->supprimerUtilisateur();
+                if (!idASupprimer.empty()) {
+                    auto it = std::remove_if(utilisateurs.begin(), utilisateurs.end(),
+                        [&](const std::unique_ptr<Utilisateur>& u) {
+                            return u->getIdentifiant() == idASupprimer;
+                        });
+
+                    if (it != utilisateurs.end()) {
+                        utilisateurs.erase(it, utilisateurs.end());
+                        cout << "Confirmation: Utilisateur " << idASupprimer << " supprime de la memoire." << endl;
+                    }
+                } else {
+                    cout << "L'operation de suppression a echoue ou a ete annulee." << endl;
+                }
+                pause();
+                break;
+            }
+            case 3:
+                cout << "Total Utilisateurs en RAM : " << utilisateurs.size() << "\n";
+                pause();
+                break;
+        }
     } while (choix != 0);
 }
 

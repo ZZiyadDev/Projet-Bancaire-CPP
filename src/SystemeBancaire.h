@@ -15,6 +15,8 @@
 #include "Manager.h"
 #include "BDManager.h"
 
+class AdminIT; // Forward declaration
+
 class SystemeBancaire {
 private:
     // POLYMORPHISM: Stores Clients, Employees, and Admins using smart pointers
@@ -31,6 +33,7 @@ private:
     void sessionClient(Client* client);
     void sessionEmploye(Employe* employe);
     void sessionManager(Manager* manager);
+    void sessionAdmin(AdminIT* admin);
     // Utilities
     std::string genererIdClient();
     void clearScreen();

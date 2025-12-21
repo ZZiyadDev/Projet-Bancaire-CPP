@@ -3,7 +3,7 @@
 #include <string>
 #include "Utilisateur.h"
 
-class Employe : virtual public Utilisateur {
+class Employe : public Utilisateur {
 protected:
     double salaire;
 
