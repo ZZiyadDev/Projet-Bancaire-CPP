@@ -2,7 +2,12 @@
 #include "CompteEpargne.h"
 #include "CompteCourant.h"
 #include "CompteProfessionnel.h"
+#include "Employe.h"
 #include "Manager.h"
+#include "Caissier.h"
+#include "EmployeClient.h"
+#include "BDManager.h"
+#include "EmployeClient.h"
 #include "AdminIT.h"
 #include <limits>
 #include <typeinfo>
@@ -48,8 +53,53 @@ SystemeBancaire::SystemeBancaire() {
             "VALUES ('MNG001', 'manager', 'Martin', 'Sophie', 'Employe', 15000, 'Manager');";
         BDManager::getInstance()->executeQuery(queryManager);
 
-        cout << "[Systeme] Admin et Manager par defaut crees avec succes." << endl;
 
+        string queryCaissier = 
+            "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
+            "VALUES ('CAIS001', 'caissier', 'Dupont', 'Jean', 'Employe', 2500, 'Caissier');";
+        BDManager::getInstance()->executeQuery(queryCaissier);
+
+        cout << "[Systeme] Admin, Manager et Caissier par defaut crees avec succes." << endl;
+    }
+
+    // --- Verification Caissier (Force Creation if missing) ---
+    bool caissierExists = false;
+    for (const auto& u : utilisateurs) {
+        if (u->getIdentifiant() == "CAIS001") {
+            caissierExists = true;
+            break;
+        }
+    }
+
+    if (!caissierExists) {
+         cout << "[Systeme] Ajout du Caissier par defaut (manquant)..." << endl;
+         auto caissier = make_unique<Caissier>("Dupont", "Jean", 2500.0, "CAIS001", "caissier");
+         utilisateurs.push_back(move(caissier));
+
+         string queryCaissier = 
+            "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
+            "VALUES ('CAIS001', 'caissier', 'Dupont', 'Jean', 'Employe', 2500, 'Caissier');";
+         BDManager::getInstance()->executeQuery(queryCaissier);
+    }
+
+    // --- Verification EmployeClient (Default for Test) ---
+    bool ecExists = false;
+    for (const auto& u : utilisateurs) {
+        if (u->getIdentifiant() == "EMPCLI001") {
+            ecExists = true;
+            break;
+        }
+    }
+
+    if (!ecExists) {
+        cout << "[Systeme] Ajout de l'Employe-Client par defaut..." << endl;
+        auto ec = make_unique<EmployeClient>("Dubois", "Paul", 3000.0, "EMPCLI001", "123", "Caissier");
+        utilisateurs.push_back(move(ec));
+        
+        string queryEC = 
+            "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
+            "VALUES ('EMPCLI001', '123', 'Dubois', 'Paul', 'EmployeClient', 3000, 'Caissier');";
+        BDManager::getInstance()->executeQuery(queryEC);
     }
 }
 
@@ -96,7 +146,12 @@ void SystemeBancaire::chargerDonnees() {
             utilisateurs.push_back(
             make_unique<Manager>(nom, prenom, salaire, 0, id, mdp)
             );
-            } 
+            }
+            else if (role == "Caissier") {
+                utilisateurs.push_back(
+                    make_unique<Caissier>(nom, prenom, salaire, id, mdp)
+                );
+            }
             else {
             utilisateurs.push_back(
             make_unique<Employe>(nom, prenom, salaire, id, mdp)
@@ -135,7 +190,22 @@ void SystemeBancaire::chargerDonnees() {
 
             if (compte) {
                 compte->setNumCompte(num);
-                proprietaire->ajouterCompte(compte.get());
+                
+                // Check if owner is Client or EmployeClient
+                if (proprietaire) {
+                    proprietaire->ajouterCompte(compte.get());
+                } else {
+                    // Try to find EmployeClient
+                     for (const auto& u : utilisateurs) {
+                        if (auto* ec = dynamic_cast<EmployeClient*>(u.get())) {
+                            if (ec->getIdentifiant() == userId) {
+                                ec->ajouterCompte(compte.get());
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 listeComptes.push_back(move(compte));
             }
         }
@@ -187,11 +257,19 @@ void SystemeBancaire::operations() {
             else if (auto* manager = dynamic_cast<Manager*>(user)) {
                 sessionManager(manager);
             }
-            // 3. Check for CLIENT
+            // 3. Check for CAISSIER
+            else if (auto* caissier = dynamic_cast<Caissier*>(user)) {
+                sessionCaissier(caissier);
+            }
+            // 4. Check for CLIENT
             else if (auto* client = dynamic_cast<Client*>(user)) {
                 sessionClient(client);
             }
-            // 4. Check for EMPLOYE (Default fallback)
+            // 5. Check for EmployeClient
+            else if (auto* ec = dynamic_cast<EmployeClient*>(user)) {
+                sessionEmployeClient(ec);
+            }
+            // 6. Check for EMPLOYE (Default fallback)
             else if (auto* emp = dynamic_cast<Employe*>(user)) {
                 sessionEmploye(emp);
             }
@@ -608,3 +686,178 @@ void SystemeBancaire::sessionAdmin(AdminIT* admin) {
     } while (choix != 0);
 }
 
+void SystemeBancaire::sessionCaissier(Caissier* caissier) {
+    int choix = -1;
+    do {
+        clearScreen();
+        cout << "=== ESPACE CAISSIER : " << caissier->getPrenom() << " " << caissier->getNom() << " ===\n";
+        cout << "1. Rechercher un Client par ID\n";
+        cout << "2. Rechercher un Client par Nom/Prenom\n";
+        cout << "3. Voir la liste de tous les Clients\n";
+        cout << "4. Ajouter un nouveau Client\n";
+        cout << "5. Ouvrir un Compte pour un Client\n";
+        cout << "0. Deconnexion\n";
+        cout << "Choix : ";
+        cin >> choix;
+
+        Client* clientSelectionne = nullptr;
+
+        if (choix == 1) {
+            string id;
+            cout << "ID Client : ";
+            cin >> id;
+            clientSelectionne = trouverClientParId(id);
+            if (!clientSelectionne) cout << "Client introuvable.\n";
+        }
+        else if (choix == 2) {
+            string nom, prenom;
+            cout << "Nom : "; cin >> nom;
+            cout << "Prenom : "; cin >> prenom;
+            clientSelectionne = trouverClient(nom, prenom);
+            if (!clientSelectionne) cout << "Client introuvable.\n";
+        }
+        else if (choix == 3) {
+            clearScreen();
+            cout << "\n--- Liste des Clients ---\n";
+            for (const auto& u : utilisateurs) {
+                if (auto* c = dynamic_cast<Client*>(u.get())) {
+                    cout << "ID: " << c->getIdentifiant() 
+                         << " | " << c->getNom() << " " << c->getPrenom() << endl;
+                }
+            }
+            pause();
+            continue;
+        }
+
+        // Once a client is selected, show operations
+        if (clientSelectionne) {
+            int sousChoix = -1;
+            do {
+                clearScreen();
+                cout << "--- Client : " << clientSelectionne->getNom() << " " << clientSelectionne->getPrenom() << " (" << clientSelectionne->getIdentifiant() << ") ---\n";
+                cout << "1. Voir les comptes\n";
+                cout << "2. Effectuer un Depot\n";
+                cout << "3. Effectuer un Retrait\n";
+                cout << "0. Retour Recherche\n";
+                cout << "Choix : ";
+                cin >> sousChoix;
+
+                const vector<Compte*>& comptes = clientSelectionne->getComptes();
+
+                if (sousChoix == 1) {
+                    if (comptes.empty()) {
+                        cout << "Ce client n'a aucun compte.\n";
+                    } else {
+                        cout << "\n--- Comptes du Client ---\n";
+                        for (auto* c : comptes) {
+                            c->afficherInfo();
+                        }
+                    }
+                    pause();
+                }
+                else if (sousChoix == 2 || sousChoix == 3) {
+                    if (comptes.empty()) {
+                        cout << "Aucun compte pour effectuer une operation.\n";
+                        pause();
+                    } else {
+                        int index = 0;
+                        cout << "\nSelectionnez le compte (1-" << comptes.size() << ") : ";
+                        cin >> index;
+
+                        if (index > 0 && index <= (int)comptes.size()) {
+                            double montant;
+                            cout << "Montant : ";
+                            cin >> montant;
+
+                            if (sousChoix == 2) {
+                                comptes[index - 1]->deposer(montant);
+                                cout << "Depot effectue par le caissier.\n";
+                            } else {
+                                if (comptes[index - 1]->retirer(montant)) {
+                                    cout << "Retrait effectue par le caissier.\n";
+                                } else {
+                                    cout << "Solde insuffisant pour ce retrait.\n";
+                                }
+                            }
+                        } else {
+                            cout << "Compte invalide.\n";
+                        }
+                        pause();
+                    }
+                }
+
+            } while (sousChoix != 0);
+        } else if (choix == 4) {
+            string n, p, d;
+            cout << "\n--- Nouveau Client ---\n";
+            cout << "Nom: "; cin >> n;
+            cout << "Prenom: "; cin >> p;
+            cout << "Date Naissance: "; cin >> d;
+            ajouterNouveauClient(n, p, d);
+            pause();
+        }
+        else if (choix == 5) {
+            string id, type; double dep;
+            cout << "\n--- Nouveau Compte ---\n";
+            cout << "ID Client: "; cin >> id;
+            cout << "Type (Epargne/Courant): "; cin >> type;
+            cout << "Depot Initial: "; cin >> dep;
+            ouvrirNouveauCompte(id, type, dep);
+            pause();
+        }
+        else if (choix != 0 && choix != 3) { // If search failed and not exiting or listing
+             pause();
+        }
+
+    } while (choix != 0);
+}
+
+void SystemeBancaire::sessionEmployeClient(EmployeClient* ec) {
+    int choix = -1;
+    do {
+        clearScreen();
+        cout << "=== ESPACE EMPLOYE-CLIENT : " << ec->getPrenom() << " " << ec->getNom() << " ===\n";
+        cout << "1. Espace Client (Mes Comptes)\n";
+        cout << "2. Espace Employe\n";
+        cout << "0. Deconnexion\n";
+        cout << "Choix : ";
+        cin >> choix;
+
+        if (choix == 1) {
+            const vector<Compte*>& comptes = ec->getComptes();
+            cout << "\n--- Vos Comptes Personnels ---\n";
+            if (comptes.empty()) {
+                cout << "Aucun compte actif.\n";
+            } else {
+                 for (size_t i = 0; i < comptes.size(); ++i) {
+                    cout << "Compte n°" << (i + 1) << " : ";
+                    comptes[i]->afficherInfo(); 
+                }
+            }
+            pause();
+        }
+        else if (choix == 2) {
+             string role = ec->getRoleSpecifique();
+             // Transform role to lower case just in case
+             // transform(role.begin(), role.end(), role.begin(), ::tolower); // Need <algorithm>
+             
+             cout << "\n--- Acces Espace Employe (" << role << ") ---\n";
+             
+             if (role == "Manager" || role == "manager") {
+                 // Create Temporary Manager Wrapper
+                 Manager tempM(ec->getNom(), ec->getPrenom(), ec->getSalaire(), 0, ec->getIdentifiant(), "temp");
+                 sessionManager(&tempM);
+             }
+             else if (role == "Caissier" || role == "caissier") {
+                 // Create Temporary Caissier Wrapper
+                 Caissier tempC(ec->getNom(), ec->getPrenom(), ec->getSalaire(), ec->getIdentifiant(), "temp");
+                 sessionCaissier(&tempC);
+             }
+             else {
+                 // Fallback for generic employee
+                 sessionEmploye(ec);
+             }
+        }
+
+    } while (choix != 0);
+}

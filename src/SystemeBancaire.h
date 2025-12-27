@@ -13,6 +13,8 @@
 #include "Employe.h"
 #include "Compte.h"
 #include "Manager.h"
+#include "Caissier.h"
+#include "EmployeClient.h"
 #include "BDManager.h"
 
 class AdminIT; // Forward declaration
@@ -33,6 +35,8 @@ private:
     void sessionClient(Client* client);
     void sessionEmploye(Employe* employe);
     void sessionManager(Manager* manager);
+    void sessionCaissier(Caissier* caissier);
+    void sessionEmployeClient(EmployeClient* ec);
     void sessionAdmin(AdminIT* admin);
     // Utilities
     std::string genererIdClient();
