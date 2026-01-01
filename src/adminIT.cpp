@@ -2,6 +2,7 @@
 #include "Manager.h"
 #include "BDManager.h"
 #include "Utilisateur.h"
+#include "EmployeClient.h"
 #include <iostream>
 #include <string>
 #include <memory>
@@ -35,50 +36,60 @@ std::string AdminIT::getRole() const {
     return "Admin IT";
 }
 
+#include "EmployeClient.h"
+
+// ... (rest of the includes)
+
 std::unique_ptr<Utilisateur> AdminIT::creerUtilisateur() {
-    std::string nom, prenom, role;
+    std::string nom, prenom, role, dateNaissance;
     double salaire;
 
-    std::cout << "\n--- Creation d'un Nouvel Utilisateur ---\\n";
+    std::cout << "\n--- Creation d'un Nouvel Utilisateur ---\n";
     std::cout << "Nom de famille: ";
     std::cin >> nom;
     std::cout << "Prenom: ";
     std::cin >> prenom;
-    std::cout << "Salaire: ";
-    std::cin >> salaire;
-    std::cout << "Role (Employe/Manager): ";
+    std::cout << "Role (Employe/Manager/EmployeClient): ";
     std::cin >> role;
 
-    if (role != "Employe" && role != "Manager") {
-        std::cerr << "Erreur: Role invalide specifie. Le role doit etre 'Employe' ou 'Manager'." << std::endl;
+    if (role != "Employe" && role != "Manager" && role != "EmployeClient") {
+        std::cerr << "Erreur: Role invalide specifie." << std::endl;
         return nullptr;
+    }
+
+    std::cout << "Salaire: ";
+    std::cin >> salaire;
+
+    if (role == "EmployeClient") {
+        std::cout << "Date de Naissance (YYYY-MM-DD): ";
+        std::cin >> dateNaissance;
     }
 
     std::string id = (role == "Manager" ? "MNG" : "EMP") + std::to_string(time(nullptr) % 1000);
     std::string mdp = "password123";
 
     std::unique_ptr<Utilisateur> nouvelUtilisateur = nullptr;
+    std::string query;
+    std::vector<std::string> params;
 
-    if (role == "Manager") {
-        nouvelUtilisateur = std::make_unique<Manager>(nom, prenom, salaire, 0, id, mdp);
+    if (role == "EmployeClient") {
+        nouvelUtilisateur = std::make_unique<EmployeClient>(nom, prenom, salaire, id, mdp, role, dateNaissance);
+        query = "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role, dateNaissance) "
+                "VALUES (?, ?, ?, ?, 'EmployeClient', ?, ?, ?);";
+        params = {id, mdp, nom, prenom, std::to_string(salaire), role, dateNaissance};
     } else {
-        nouvelUtilisateur = std::make_unique<Employe>(nom, prenom, salaire, id, mdp);
+        if (role == "Manager") {
+            nouvelUtilisateur = std::make_unique<Manager>(nom, prenom, salaire, 0, id, mdp);
+        } else { // Employe
+            nouvelUtilisateur = std::make_unique<Employe>(nom, prenom, salaire, id, mdp);
+        }
+        query = "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
+                "VALUES (?, ?, ?, ?, 'Employe', ?, ?);";
+        params = {id, mdp, nom, prenom, std::to_string(salaire), role};
     }
 
     std::cout << "Utilisateur cree en memoire. ID: " << id << ", MDP (defaut): " << mdp << std::endl;
     std::cout << "Ajout a la base de donnees..." << std::endl;
-
-    std::string query = "INSERT INTO Users (id, mdp, nom, prenom, type, salaire, role) "
-                        "VALUES (?, ?, ?, ?, 'Employe', ?, ?);";
-    
-    std::vector<std::string> params = {
-        id,
-        mdp,
-        nom,
-        prenom,
-        std::to_string(salaire),
-        role
-    };
 
     if (BDManager::getInstance()->executePrepared(query, params)) {
         std::cout << "Utilisateur ajoute a la DB avec succes." << std::endl;

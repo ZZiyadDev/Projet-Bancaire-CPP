@@ -12,125 +12,157 @@
 #include <limits>
 #include <string>
 #include <vector>
-
-using namespace std;
+#include <cstdlib> // For system()
 
 void InterfaceUtilisateur::clearScreen() {
-    cout << string(50, '\n');
+#ifdef _WIN32
+    std::system("cls");
+#else
+    std::system("clear");
+#endif
 }
 
 void InterfaceUtilisateur::pause() {
-    cout << "\nAppuyez sur Entree pour continuer...";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    cin.get();
+    std::cout << "\nAppuyez sur Entree pour continuer...";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cin.get();
+}
+
+void InterfaceUtilisateur::printHeader(const std::string& title, const std::string& subtitle) {
+    clearScreen();
+    std::cout << UI::Colors::CYAN << "+-------------------------------------------------+" << UI::Colors::RESET << std::endl;
+    std::cout << UI::Colors::CYAN << "| " << UI::Colors::YELLOW << title << std::string(48 - title.length(), ' ') << UI::Colors::CYAN << "|" << UI::Colors::RESET << std::endl;
+    if (!subtitle.empty()) {
+        std::cout << UI::Colors::CYAN << "| " << UI::Colors::RESET << subtitle << std::string(48 - subtitle.length(), ' ') << UI::Colors::CYAN << "|" << UI::Colors::RESET << std::endl;
+    }
+    std::cout << UI::Colors::CYAN << "+-------------------------------------------------+" << UI::Colors::RESET << std::endl;
+    std::cout << std::endl;
+}
+
+void InterfaceUtilisateur::printFooter() {
+    std::cout << std::endl;
+    std::cout << UI::Colors::CYAN << "+-------------------------------------------------+" << UI::Colors::RESET << std::endl;
+}
+
+void InterfaceUtilisateur::printMessage(const std::string& message, const std::string& color) {
+    std::cout << color << message << UI::Colors::RESET << std::endl;
 }
 
 void InterfaceUtilisateur::afficherMenuClient(Client* client, CompteManager& compteManager) {
     int choix = -1;
     do {
-        clearScreen();
-        cout << "=== ESPACE CLIENT : " << client->getPrenom() << " " << client->getNom() << " ===\n";
-        cout << "1. Voir mes Comptes\n";
-        cout << "2. Faire un Depot\n";
-        cout << "3. Faire un Retrait\n";
-        cout << "4. Faire un Virement\n";
-        cout << "5. Consulter l'Historique\n";
-        cout << "0. Deconnexion\n";
-        cout << "Choix : ";
+        std::string subtitle = "Connecte en tant que : " + client->getPrenom() + " " + client->getNom();
+        printHeader("ESPACE CLIENT", subtitle);
+
+        std::cout << "   1. Voir mes Comptes" << std::endl;
+        std::cout << "   2. Faire un Depot" << std::endl;
+        std::cout << "   3. Faire un Retrait" << std::endl;
+        std::cout << "   4. Faire un Virement" << std::endl;
+        std::cout << "   5. Consulter l'Historique" << std::endl;
+        std::cout << std::endl;
+        std::cout << "   " << UI::Colors::YELLOW << "0. Deconnexion" << UI::Colors::RESET << std::endl;
         
-        if (!(cin >> choix)) {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        printFooter();
+        std::cout << "> Votre choix : ";
+        
+        if (!(std::cin >> choix)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             continue;
         }
 
-        const vector<Compte*>& comptes = client->getComptes();
+        const std::vector<Compte*>& comptes = client->getComptes();
 
         if (choix == 1) {
-            cout << "\n--- Vos Comptes ---\n";
+            printHeader("VOS COMPTES", subtitle);
             if (comptes.empty()) {
-                cout << "Aucun compte actif.\n";
+                printMessage("Aucun compte actif.", UI::Colors::YELLOW);
             } else {
                 for (size_t i = 0; i < comptes.size(); ++i) {
-                    cout << "Compte n°" << (i + 1) << " : ";
+                    std::cout << "Compte n°" << (i + 1) << " : ";
                     comptes[i]->afficherInfo(); 
                 }
             }
         }
         else if (choix == 2 || choix == 3) { // DEPOT ou RETRAIT
+            printHeader(choix == 2 ? "DEPOT" : "RETRAIT", subtitle);
             if (comptes.empty()) {
-                cout << "Erreur : Vous n'avez aucun compte.\n";
+                printMessage("Erreur : Vous n'avez aucun compte.", UI::Colors::RED);
             } else {
                 int index = 0;
-                cout << "\nSur quel compte ? (Entrez le numero 1, 2...) : ";
-                cin >> index;
+                std::cout << "\nSur quel compte ? (Entrez le numero 1, 2...) : ";
+                std::cin >> index;
                 
                 if (index > 0 && index <= (int)comptes.size()) {
                     double montant;
-                    cout << "Montant : ";
-                    cin >> montant;
+                    std::cout << "Montant : ";
+                    std::cin >> montant;
                     
                     if (choix == 2) {
                         comptes[index - 1]->deposer(montant);
+                        printMessage("Depot effectue avec succes.", UI::Colors::GREEN);
                     } else {
                         if (comptes[index - 1]->retirer(montant)) {
-                            cout << "Retrait effectue avec succes.\n";
+                            printMessage("Retrait effectue avec succes.", UI::Colors::GREEN);
                         } else {
-                            cout << "Erreur : Solde insuffisant ou montant invalide.\n";
+                            printMessage("Erreur : Solde insuffisant ou montant invalide.", UI::Colors::RED);
                         }
                     }
                 } else {
-                    cout << "Numero de compte invalide.\n";
+                    printMessage("Numero de compte invalide.", UI::Colors::RED);
                 }
             }
         }
         else if (choix == 4) { // VIREMENT
+             printHeader("VIREMENT", subtitle);
             if (comptes.empty()) {
-                cout << "Erreur : Il vous faut un compte source.\n";
+                printMessage("Erreur : Il vous faut un compte source.", UI::Colors::RED);
             } else {
                 int indexSrc = 0;
-                cout << "Depuis quel compte ? (1-" << comptes.size() << ") : ";
-                cin >> indexSrc;
+                std::cout << "Depuis quel compte ? (1-" << comptes.size() << ") : ";
+                std::cin >> indexSrc;
                 
                 if (indexSrc > 0 && indexSrc <= (int)comptes.size()) {
-                    string destID;
-                    cout << "ID du compte destinataire : ";
-                    cin >> destID;
+                    std::string destID;
+                    std::cout << "ID du compte destinataire : ";
+                    std::cin >> destID;
                     
                     Compte* destCompte = compteManager.trouverCompte(destID);
 
                     if (destCompte != nullptr) {
                         double montant;
-                        cout << "Montant du virement : ";
-                        cin >> montant;
+                        std::cout << "Montant du virement : ";
+                        std::cin >> montant;
                         
                         comptes[indexSrc - 1]->virementVers(*destCompte, montant);
+                         printMessage("Virement effectue avec succes.", UI::Colors::GREEN);
                     } else {
-                        cout << "Erreur : Compte destinataire introuvable.\n";
+                        printMessage("Erreur : Compte destinataire introuvable.", UI::Colors::RED);
                     }
                 } else {
-                     cout << "Compte source invalide.\n";
+                     printMessage("Compte source invalide.", UI::Colors::RED);
                 }
             }
         }
         if (choix == 5) {
+            printHeader("HISTORIQUE DE COMPTE", subtitle);
             if (comptes.empty()) {
-                cout << "Aucun compte disponible.\n";
+                printMessage("Aucun compte disponible.", UI::Colors::YELLOW);
             } else {
-                cout << "\n--- Choix du Compte pour Historique ---\n";
+                std::cout << "\n--- Choix du Compte pour Historique ---\n";
                 for (size_t i = 0; i < comptes.size(); ++i) {
-                    cout << (i + 1) << ". "; 
+                    std::cout << (i + 1) << ". "; 
                     comptes[i]->afficherInfo(); 
                 }
                 
                 int index = 0;
-                cout << "Votre choix : ";
-                cin >> index;
+                std::cout << "Votre choix : ";
+                std::cin >> index;
 
                 if (index > 0 && index <= (int)comptes.size()) {
                     comptes[index - 1]->afficherHistorique();
                 } else {
-                    cout << "Compte invalide.\n";
+                    printMessage("Compte invalide.", UI::Colors::RED);
                 }
             }
         }
@@ -142,26 +174,27 @@ void InterfaceUtilisateur::afficherMenuClient(Client* client, CompteManager& com
 void InterfaceUtilisateur::afficherMenuEmploye(Employe* employe, UtilisateurManager& utilisateurManager, CompteManager& compteManager) {
     int choix = -1;
     do {
-        clearScreen();
-        cout << "=== ESPACE EMPLOYE : " << employe->getRole() << " ===" << endl;
-        cout << "1. Creer un Client" << endl;
-        cout << "2. Ouvrir un Compte" << endl;
-        cout << "0. Deconnexion" << endl;
-        cout << "Choix : ";
-        cin >> choix;
+        printHeader("ESPACE EMPLOYE", "Role: " + employe->getRole());
+        std::cout << "1. Creer un Client" << std::endl;
+        std::cout << "2. Ouvrir un Compte" << std::endl;
+        std::cout << std::endl;
+        std::cout << "0. Deconnexion" << std::endl;
+        printFooter();
+        std::cout << "> Choix : ";
+        std::cin >> choix;
 
         if (choix == 1) {
-            string n, p, d;
-            cout << "Nom: "; cin >> n;
-            cout << "Prenom: "; cin >> p;
-            cout << "Date Naissance: "; cin >> d;
+            std::string n, p, d;
+            std::cout << "Nom: "; std::cin >> n;
+            std::cout << "Prenom: "; std::cin >> p;
+            std::cout << "Date Naissance: "; std::cin >> d;
             utilisateurManager.ajouterNouveauClient(n, p, d);
         }
         else if (choix == 2) {
-            string id, type; double dep;
-            cout << "ID Client: "; cin >> id;
-            cout << "Type (Epargne/Courant): "; cin >> type;
-            cout << "Depot: "; cin >> dep;
+            std::string id, type; double dep;
+            std::cout << "ID Client: "; std::cin >> id;
+            std::cout << "Type (Epargne/Courant): "; std::cin >> type;
+            std::cout << "Depot: "; std::cin >> dep;
             compteManager.ouvrirNouveauCompte(id, type, dep, utilisateurManager);
         }
 
@@ -172,33 +205,33 @@ void InterfaceUtilisateur::afficherMenuEmploye(Employe* employe, UtilisateurMana
 void InterfaceUtilisateur::afficherMenuManager(Employe* employe, UtilisateurManager& utilisateurManager) {
     Manager* manager = dynamic_cast<Manager*>(employe);
     if (!manager) {
-        cout << "Erreur : L'employe n'est pas un manager valide." << endl;
+        printMessage("Erreur : L'employe n'est pas un manager valide.", UI::Colors::RED);
         pause();
         return;
     }
     int choix = -1;
 
     do {
-        clearScreen();
-        cout << "=== ESPACE MANAGER : " 
-                  << manager->getPrenom() << " " 
-                  << manager->getNom() << " ===\n";
-        cout << "1. Voir la liste des employés\n";
-        cout << "2. Ajuster le salaire d'un employé\n";
-        cout << "3. Voir tous les clients\n";
-        cout << "0. Deconnexion\n";
-        cout << "Votre choix : ";
+        std::string subtitle = manager->getPrenom() + " " + manager->getNom();
+        printHeader("ESPACE MANAGER", subtitle);
+        
+        std::cout << "1. Voir la liste des employés" << std::endl;
+        std::cout << "2. Ajuster le salaire d'un employé" << std::endl;
+        std::cout << "3. Voir tous les clients" << std::endl;
+        std::cout << std::endl;
+        std::cout << "0. Deconnexion" << std::endl;
+        printFooter();
+        std::cout << "> Votre choix : ";
 
-        if (!(cin >> choix)) {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        if (!(std::cin >> choix)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             continue;
         }
 
         switch (choix) {
-
             case 1: {
-                cout << "\n--- Liste des Employes ---\n";
+                printHeader("LISTE DES EMPLOYES", subtitle);
                 for (const auto& u : utilisateurManager.getAllUtilisateurs()) {
                     if (auto* emp = dynamic_cast<Employe*>(u.get())) {
                         emp->afficher();
@@ -207,37 +240,35 @@ void InterfaceUtilisateur::afficherMenuManager(Employe* employe, UtilisateurMana
                 pause();
                 break;
             }
-
             case 2: {
-                string id;
+                 printHeader("AJUSTER SALAIRE", subtitle);
+                std::string id;
                 double nouveauSalaire;
 
-                cout << "ID de l'employé à modifier : ";
-                cin >> id;
+                std::cout << "ID de l'employé à modifier : ";
+                std::cin >> id;
 
                 Utilisateur* user = utilisateurManager.getUtilisateur(id);
                 if(user) {
                     Employe* empTrouve = dynamic_cast<Employe*>(user);
                     if (empTrouve) {
-                        cout << "Salaire actuel : " 
+                        std::cout << "Salaire actuel : " 
                                   << empTrouve->getSalaire() << " MAD\n";
-                        cout << "Nouveau salaire : ";
-                        cin >> nouveauSalaire;
+                        std::cout << "Nouveau salaire : ";
+                        std::cin >> nouveauSalaire;
                         empTrouve->setSalaire(nouveauSalaire);
-                        cout << "Salaire mis à jour !\n";
+                        printMessage("Salaire mis à jour !", UI::Colors::GREEN);
                     } else {
-                        cout << "L'utilisateur n'est pas un employe.\n";
+                        printMessage("L'utilisateur n'est pas un employe.", UI::Colors::RED);
                     }
                 } else {
-                    cout << "Employé introuvable.\n";
+                    printMessage("Employé introuvable.", UI::Colors::RED);
                 }
-
                 pause();
                 break;
             }
-
             case 3: {
-                cout << "\n--- Liste des Clients ---\n";
+                printHeader("LISTE DES CLIENTS", subtitle);
                 for (const auto& u : utilisateurManager.getAllUtilisateurs()) {
                     if (auto* client = dynamic_cast<Client*>(u.get())) {
                         client->afficherProfil();
@@ -246,39 +277,37 @@ void InterfaceUtilisateur::afficherMenuManager(Employe* employe, UtilisateurMana
                 pause();
                 break;
             }
-
             case 0:
-                cout << "Deconnexion du manager...\n";
+                printMessage("Deconnexion du manager...", UI::Colors::YELLOW);
                 break;
-
             default:
-                cout << "Choix invalide.\n";
+                printMessage("Choix invalide.", UI::Colors::RED);
                 pause();
         }
-
     } while (choix != 0);
 }
 
 void InterfaceUtilisateur::afficherMenuAdmin(AdminIT* admin, UtilisateurManager& utilisateurManager) {
     int choix = -1;
     do {
-        clearScreen();
-        cout << "=== CONSOLE ADMIN IT (" << admin->getNiveauAcces() << ") ===\n";
-        cout << "1. Creer un nouvel utilisateur (Employe/Manager)\n";
-        cout << "2. Supprimer un utilisateur\n";
-        cout << "3. Voir tous les logs (Debug)\n";
-        cout << "0. Deconnexion\n";
-        cout << "Choix : ";
-        cin >> choix;
+        printHeader("CONSOLE ADMIN IT", "Niveau: " + admin->getNiveauAcces());
+        std::cout << "1. Creer un nouvel utilisateur (Employe/Manager/EmployeClient)" << std::endl;
+        std::cout << "2. Supprimer un utilisateur" << std::endl;
+        std::cout << "3. Voir tous les logs (Debug)" << std::endl;
+        std::cout << std::endl;
+        std::cout << "0. Deconnexion" << std::endl;
+        printFooter();
+        std::cout << "> Choix : ";
+        std::cin >> choix;
 
         switch(choix) {
             case 1: {
                 auto nouvelUtilisateur = admin->creerUtilisateur();
                 if (nouvelUtilisateur) {
-                    utilisateurManager.ajouterUtilisateur(move(nouvelUtilisateur));
-                    cout << "Confirmation: Utilisateur ajoute au systeme." << endl;
+                    utilisateurManager.ajouterUtilisateur(std::move(nouvelUtilisateur));
+                    printMessage("Confirmation: Utilisateur ajoute au systeme.", UI::Colors::GREEN);
                 } else {
-                    cout << "L'operation de creation a echoue ou a ete annulee." << endl;
+                    printMessage("L'operation de creation a echoue ou a ete annulee.", UI::Colors::YELLOW);
                 }
                 pause();
                 break;
@@ -287,18 +316,18 @@ void InterfaceUtilisateur::afficherMenuAdmin(AdminIT* admin, UtilisateurManager&
                 std::string idASupprimer = admin->supprimerUtilisateur();
                 if (!idASupprimer.empty()) {
                     if (utilisateurManager.supprimerUtilisateur(idASupprimer)) {
-                        cout << "Confirmation: Utilisateur " << idASupprimer << " supprime." << endl;
+                        printMessage("Confirmation: Utilisateur " + idASupprimer + " supprime.", UI::Colors::GREEN);
                     } else {
-                        cout << "Echec de la suppression." << endl;
+                        printMessage("Echec de la suppression.", UI::Colors::RED);
                     }
                 } else {
-                    cout << "L'operation de suppression a echoue ou a ete annulee." << endl;
+                    printMessage("L'operation de suppression a echoue ou a ete annulee.", UI::Colors::YELLOW);
                 }
                 pause();
                 break;
             }
             case 3:
-                cout << "Total Utilisateurs en RAM : " << utilisateurManager.getAllUtilisateurs().size() << "\n";
+                std::cout << "Total Utilisateurs en RAM : " << utilisateurManager.getAllUtilisateurs().size() << "\n";
                 pause();
                 break;
         }
@@ -308,46 +337,48 @@ void InterfaceUtilisateur::afficherMenuAdmin(AdminIT* admin, UtilisateurManager&
 void InterfaceUtilisateur::afficherMenuCaissier(Employe* employe, UtilisateurManager& utilisateurManager, CompteManager& compteManager) {
     Caissier* caissier = dynamic_cast<Caissier*>(employe);
     if (!caissier) {
-        cout << "Erreur : L'employe n'est pas un caissier valide." << endl;
+        printMessage("Erreur : L'employe n'est pas un caissier valide.", UI::Colors::RED);
         pause();
         return;
     }
     int choix = -1;
     do {
-        clearScreen();
-        cout << "=== ESPACE CAISSIER : " << caissier->getPrenom() << " " << caissier->getNom() << " ===\n";
-        cout << "1. Rechercher un Client par ID\n";
-        cout << "2. Rechercher un Client par Nom/Prenom\n";
-        cout << "3. Voir la liste de tous les Clients\n";
-        cout << "4. Ajouter un nouveau Client\n";
-        cout << "5. Ouvrir un Compte pour un Client\n";
-        cout << "0. Deconnexion\n";
-        cout << "Choix : ";
-        cin >> choix;
+        std::string subtitle = caissier->getPrenom() + " " + caissier->getNom();
+        printHeader("ESPACE CAISSIER", subtitle);
+
+        std::cout << "1. Rechercher un Client par ID" << std::endl;
+        std::cout << "2. Rechercher un Client par Nom/Prenom" << std::endl;
+        std::cout << "3. Voir la liste de tous les Clients" << std::endl;
+        std::cout << "4. Ajouter un nouveau Client" << std::endl;
+        std::cout << "5. Ouvrir un Compte pour un Client" << std::endl;
+        std::cout << std::endl;
+        std::cout << "0. Deconnexion" << std::endl;
+        printFooter();
+        std::cout << "> Choix : ";
+        std::cin >> choix;
 
         Client* clientSelectionne = nullptr;
 
         if (choix == 1) {
-            string id;
-            cout << "ID Client : ";
-            cin >> id;
+            std::string id;
+            std::cout << "ID Client : ";
+            std::cin >> id;
             clientSelectionne = utilisateurManager.getClientById(id);
-            if (!clientSelectionne) cout << "Client introuvable.\n";
+            if (!clientSelectionne) printMessage("Client introuvable.", UI::Colors::RED);
         }
         else if (choix == 2) {
-            string nom, prenom;
-            cout << "Nom : "; cin >> nom;
-            cout << "Prenom : "; cin >> prenom;
+            std::string nom, prenom;
+            std::cout << "Nom : "; std::cin >> nom;
+            std::cout << "Prenom : "; std::cin >> prenom;
             clientSelectionne = utilisateurManager.getClient(nom, prenom);
-            if (!clientSelectionne) cout << "Client introuvable.\n";
+            if (!clientSelectionne) printMessage("Client introuvable.", UI::Colors::RED);
         }
         else if (choix == 3) {
-            clearScreen();
-            cout << "\n--- Liste des Clients ---\n";
+            printHeader("LISTE DE TOUS LES CLIENTS", subtitle);
             for (const auto& u : utilisateurManager.getAllUtilisateurs()) {
                 if (auto* c = dynamic_cast<Client*>(u.get())) {
-                    cout << "ID: " << c->getIdentifiant() 
-                         << " | " << c->getNom() << " " << c->getPrenom() << endl;
+                    std::cout << "ID: " << c->getIdentifiant() 
+                         << " | " << c->getNom() << " " << c->getPrenom() << std::endl;
                 }
             }
             pause();
@@ -357,22 +388,25 @@ void InterfaceUtilisateur::afficherMenuCaissier(Employe* employe, UtilisateurMan
         if (clientSelectionne) {
             int sousChoix = -1;
             do {
-                clearScreen();
-                cout << "--- Client : " << clientSelectionne->getNom() << " " << clientSelectionne->getPrenom() << " (" << clientSelectionne->getIdentifiant() << ") ---\n";
-                cout << "1. Voir les comptes\n";
-                cout << "2. Effectuer un Depot\n";
-                cout << "3. Effectuer un Retrait\n";
-                cout << "0. Retour Recherche\n";
-                cout << "Choix : ";
-                cin >> sousChoix;
+                std::string clientSubtitle = clientSelectionne->getNom() + " " + clientSelectionne->getPrenom() + " (" + clientSelectionne->getIdentifiant() + ")";
+                printHeader("MENU CLIENT (CAISSIER)", clientSubtitle);
+                
+                std::cout << "1. Voir les comptes" << std::endl;
+                std::cout << "2. Effectuer un Depot" << std::endl;
+                std::cout << "3. Effectuer un Retrait" << std::endl;
+                std::cout << std::endl;
+                std::cout << "0. Retour Recherche" << std::endl;
+                printFooter();
+                std::cout << "> Choix : ";
+                std::cin >> sousChoix;
 
-                const vector<Compte*>& comptes = clientSelectionne->getComptes();
+                const std::vector<Compte*>& comptes = clientSelectionne->getComptes();
 
                 if (sousChoix == 1) {
                     if (comptes.empty()) {
-                        cout << "Ce client n'a aucun compte.\n";
+                        printMessage("Ce client n'a aucun compte.", UI::Colors::YELLOW);
                     } else {
-                        cout << "\n--- Comptes du Client ---\n";
+                        std::cout << "\n--- Comptes du Client ---\n";
                         for (auto* c : comptes) {
                             c->afficherInfo();
                         }
@@ -381,30 +415,30 @@ void InterfaceUtilisateur::afficherMenuCaissier(Employe* employe, UtilisateurMan
                 }
                 else if (sousChoix == 2 || sousChoix == 3) {
                     if (comptes.empty()) {
-                        cout << "Aucun compte pour effectuer une operation.\n";
+                        printMessage("Aucun compte pour effectuer une operation.", UI::Colors::YELLOW);
                         pause();
                     } else {
                         int index = 0;
-                        cout << "\nSelectionnez le compte (1-" << comptes.size() << ") : ";
-                        cin >> index;
+                        std::cout << "\nSelectionnez le compte (1-" << comptes.size() << ") : ";
+                        std::cin >> index;
 
                         if (index > 0 && index <= (int)comptes.size()) {
                             double montant;
-                            cout << "Montant : ";
-                            cin >> montant;
+                            std::cout << "Montant : ";
+                            std::cin >> montant;
 
                             if (sousChoix == 2) {
                                 comptes[index - 1]->deposer(montant);
-                                cout << "Depot effectue par le caissier.\n";
+                                printMessage("Depot effectue par le caissier.", UI::Colors::GREEN);
                             } else {
                                 if (comptes[index - 1]->retirer(montant)) {
-                                    cout << "Retrait effectue par le caissier.\n";
+                                    printMessage("Retrait effectue par le caissier.", UI::Colors::GREEN);
                                 } else {
-                                    cout << "Solde insuffisant pour ce retrait.\n";
+                                    printMessage("Solde insuffisant pour ce retrait.", UI::Colors::RED);
                                 }
                             }
                         } else {
-                            cout << "Compte invalide.\n";
+                            printMessage("Compte invalide.", UI::Colors::RED);
                         }
                         pause();
                     }
@@ -412,24 +446,24 @@ void InterfaceUtilisateur::afficherMenuCaissier(Employe* employe, UtilisateurMan
 
             } while (sousChoix != 0);
         } else if (choix == 4) {
-            string n, p, d;
-            cout << "\n--- Nouveau Client ---\n";
-            cout << "Nom: "; cin >> n;
-            cout << "Prenom: "; cin >> p;
-            cout << "Date Naissance: "; cin >> d;
+            std::string n, p, d;
+            printHeader("NOUVEAU CLIENT", subtitle);
+            std::cout << "Nom: "; std::cin >> n;
+            std::cout << "Prenom: "; std::cin >> p;
+            std::cout << "Date Naissance: "; std::cin >> d;
             utilisateurManager.ajouterNouveauClient(n, p, d);
             pause();
         }
         else if (choix == 5) {
-            string id, type; double dep;
-            cout << "\n--- Nouveau Compte ---\n";
-            cout << "ID Client: "; cin >> id;
-            cout << "Type (Epargne/Courant): "; cin >> type;
-            cout << "Depot Initial: "; cin >> dep;
+            std::string id, type; double dep;
+            printHeader("NOUVEAU COMPTE", subtitle);
+            std::cout << "ID Client: "; std::cin >> id;
+            std::cout << "Type (Epargne/Courant): "; std::cin >> type;
+            std::cout << "Depot Initial: "; std::cin >> dep;
             compteManager.ouvrirNouveauCompte(id, type, dep, utilisateurManager);
             pause();
         }
-        else if (choix != 0 && choix != 3) { 
+        else if (choix != 0 && choix != 3 && !clientSelectionne) { 
              pause();
         }
 
@@ -439,30 +473,32 @@ void InterfaceUtilisateur::afficherMenuCaissier(Employe* employe, UtilisateurMan
 void InterfaceUtilisateur::afficherMenuEmployeClient(EmployeClient* ec, UtilisateurManager& utilisateurManager, CompteManager& compteManager) {
     int choix = -1;
     do {
-        clearScreen();
-        cout << "=== ESPACE EMPLOYE-CLIENT : " << ec->Utilisateur::getPrenom() << " " << ec->Utilisateur::getNom() << " ===\n";
-        cout << "1. Espace Client (Mes Comptes)\n";
-        cout << "2. Espace Employe\n";
-        cout << "0. Deconnexion\n";
-        cout << "Choix : ";
-        cin >> choix;
+        std::string subtitle = ec->Utilisateur::getPrenom() + " " + ec->Utilisateur::getNom();
+        printHeader("ESPACE EMPLOYE-CLIENT", subtitle);
+        
+        std::cout << "1. Espace Client (Mes Comptes)" << std::endl;
+        std::cout << "2. Espace Employe" << std::endl;
+        std::cout << std::endl;
+        std::cout << "0. Deconnexion" << std::endl;
+        printFooter();
+        std::cout << "> Choix : ";
+        std::cin >> choix;
 
         if (choix == 1) {
-            const vector<Compte*>& comptes = ec->getComptes();
-            cout << "\n--- Vos Comptes Personnels ---\n";
+            const std::vector<Compte*>& comptes = ec->getComptes();
+            printHeader("VOS COMPTES PERSONNELS", subtitle);
             if (comptes.empty()) {
-                cout << "Aucun compte actif.\n";
+                printMessage("Aucun compte actif.", UI::Colors::YELLOW);
             } else {
                  for (size_t i = 0; i < comptes.size(); ++i) {
-                    cout << "Compte n°" << (i + 1) << " : ";
+                    std::cout << "Compte n°" << (i + 1) << " : ";
                     comptes[i]->afficherInfo(); 
                 }
             }
             pause();
         }
         else if (choix == 2) {
-             string role = ec->getRoleSpecifique();
-             cout << "\n--- Acces Espace Employe (" << role << ") ---\n";
+             std::string role = ec->getRoleSpecifique();
              
              if (role == "Manager" || role == "manager") {
                  afficherMenuManager(ec, utilisateurManager);

@@ -6,14 +6,12 @@
 #include "EmployeClient.h"
 #include <iostream>
 
-using namespace std;
-
 SystemeBancaire::SystemeBancaire() {
     // The managers are initialized in the member initializer list.
     // Their constructors now handle loading data and creating default users.
-    cout << "[SystemeBancaire] Initialisation..." << endl;
+    std::cout << "[SystemeBancaire] Initialisation..." << std::endl;
     compteManager.chargerDonnees(utilisateurManager);
-    cout << "[SystemeBancaire] Systeme pret." << endl;
+    std::cout << "[SystemeBancaire] Systeme pret." << std::endl;
 }
 
 SystemeBancaire::~SystemeBancaire() {
@@ -24,28 +22,26 @@ void SystemeBancaire::lancer() {
     bool applicationActive = true;
 
     while (applicationActive) {
-        interfaceUtilisateur.clearScreen();
-        cout << "==========================================" << endl;
-        cout << "      BANQUE CPP - CONNEXION              " << endl;
-        cout << "==========================================" << endl;
+        interfaceUtilisateur.printHeader("BANQUE CPP - CONNEXION", "Veuillez vous authentifier");
 
-        string login, pass;
-        cout << "\nIdentifiant (ou 'exit') : ";
-        cin >> login;
+        std::string login, pass;
+        std::cout << "   (Tapez 'exit' pour quitter)" << std::endl;
+        std::cout << "   " << UI::Colors::YELLOW << "> " << UI::Colors::RESET << "Identifiant : ";
+        std::cin >> login;
 
         if (login == "exit") {
             applicationActive = false;
             continue;
         }
 
-        cout << "Mot de passe : ";
-        cin >> pass;
+        std::cout << "   " << UI::Colors::YELLOW << "> " << UI::Colors::RESET << "Mot de passe : ";
+        std::cin >> pass;
+        interfaceUtilisateur.printFooter();
 
         Utilisateur* user = serviceAuthentification.authentifier(login, pass, utilisateurManager.getAllUtilisateurs());
 
         if (user) {
-            cout << "\nConnexion reussie : " << user->getPrenom() << " " << user->getNom() << endl;
-            cout << "Type d'utilisateur: " << user->getTypeUtilisateur() << endl; // DEBUG
+            interfaceUtilisateur.printMessage("\nConnexion reussie : " + user->getPrenom() + " " + user->getNom(), UI::Colors::GREEN);
             interfaceUtilisateur.pause();
 
             if (auto* admin = dynamic_cast<AdminIT*>(user)) {
@@ -67,13 +63,13 @@ void SystemeBancaire::lancer() {
                 interfaceUtilisateur.afficherMenuEmploye(emp, utilisateurManager, compteManager);
             }
             else {
-                 cout << "Erreur: Type d'utilisateur inconnu." << endl;
+                 interfaceUtilisateur.printMessage("Erreur: Type d'utilisateur inconnu.", UI::Colors::RED);
                  interfaceUtilisateur.pause();
             }
         } else {
-            cout << "\n[!] Identifiants incorrects." << endl;
+            interfaceUtilisateur.printMessage("\n[!] Identifiants incorrects.", UI::Colors::RED);
             interfaceUtilisateur.pause();
         }
     }
-    cout << "Fermeture de l'application." << endl;
+    interfaceUtilisateur.printMessage("Fermeture de l'application.", UI::Colors::YELLOW);
 }
