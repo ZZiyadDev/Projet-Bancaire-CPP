@@ -13,7 +13,9 @@ AdminIT::AdminIT() : Employe(), niveauAcces("user") {}
 AdminIT::AdminIT(const std::string& nom, const std::string& prenom,
                  double salaire, const std::string& niveauAcces,
                  const std::string& identifiant, const std::string& motDePasse)
-    : Employe(nom, prenom, salaire, identifiant, motDePasse), niveauAcces(niveauAcces) {}
+    : Utilisateur(identifiant, motDePasse, nom, prenom),
+      Employe(nom, prenom, salaire, identifiant, motDePasse),
+      niveauAcces(niveauAcces) {}
 
 const std::string& AdminIT::getNiveauAcces() const {
     return niveauAcces;

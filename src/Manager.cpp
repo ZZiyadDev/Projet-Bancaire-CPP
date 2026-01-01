@@ -6,7 +6,9 @@ Manager::Manager() : Employe(), nombreEmployes(0) {}
 Manager::Manager(const std::string& nom, const std::string& prenom,
                  double salaire, int nombreEmployes,
                  const std::string& identifiant, const std::string& motDePasse)
-    : Employe(nom, prenom, salaire, identifiant, motDePasse), nombreEmployes(nombreEmployes) {}
+    : Utilisateur(identifiant, motDePasse, nom, prenom),
+      Employe(nom, prenom, salaire, identifiant, motDePasse),
+      nombreEmployes(nombreEmployes) {}
 
 int Manager::getNombreEmployes() const {
     return nombreEmployes;

@@ -26,7 +26,7 @@ int main() {
 
     // 3. Start the Application
     // This method will handle the Login Loop and menus internally
-    banque.operations(); 
+    banque.lancer(); 
 
     return 0;
 }
