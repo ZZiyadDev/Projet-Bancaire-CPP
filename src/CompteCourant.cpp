@@ -1,5 +1,6 @@
 #include "CompteCourant.h"
 #include "BDManager.h"
+#include "Exceptions.h"
 #include <iostream>
 
     void CompteCourant::afficherInfo() const  {
@@ -9,22 +10,22 @@
               << std::endl;
     }
     
-    bool CompteCourant::retirer(double montant) {
-        if(solde+decouvertAutorise >=montant){
-            solde-=montant;
+    void CompteCourant::retirer(double montant) {
+        if (montant <= 0) {
+            throw MontantInvalide("Le montant du retrait doit être positif.");
+        }
+        if(solde + decouvertAutorise >= montant){
+            solde -= montant;
             enregistrerOperation("Retrait", montant);
             //modifier base de donnee
             std::string query = "UPDATE Comptes SET solde = " + std::to_string(solde) + " WHERE numCompte = '" + numCompte + "';";
             BDManager::getInstance()->executeQuery(query);
 
             std::cout << "Retrait de " << montant << " effectue. Nouveau solde: " << solde << std::endl;
-            return true;
         }
         else{
-            std::cout << "Erreur: Solde insuffisant (depasse le decouvert)." << std::endl;
-            return false;
+            throw SoldeInsuffisant("Erreur: Solde insuffisant (depasse le decouvert).");
         }
-
     }
 
 

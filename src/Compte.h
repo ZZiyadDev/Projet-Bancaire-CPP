@@ -25,7 +25,7 @@ class Compte{
         //Explication: Méthode pure (Abstraite) -> Obligation de l'implémenter dans les classes dérivées
         virtual void afficherInfo() const = 0;
         
-        virtual bool retirer(double montant) = 0;
+        virtual void retirer(double montant) = 0;
 
         //Explication: Méthode virtuelle (Peut être redéfinie dans les classes dérivées)   
         virtual void deposer(double montant);
@@ -34,7 +34,7 @@ class Compte{
         double getSolde() const {return solde;}
         std::string getTitulaire() const {return titulaire;}
 
-        virtual bool virementVers(Compte& destinataire, double montant);
+        virtual void virementVers(Compte& destinataire, double montant);
         
         virtual void afficherHistorique() const;
 

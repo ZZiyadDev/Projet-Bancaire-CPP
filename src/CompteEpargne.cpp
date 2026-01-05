@@ -1,6 +1,7 @@
 #include<iostream>
 #include "CompteEpargne.h"
 #include "BDManager.h"
+#include "Exceptions.h"
 
 
 void CompteEpargne::afficherInfo() const {
@@ -10,7 +11,10 @@ void CompteEpargne::afficherInfo() const {
               << std::endl;
 }
 
-bool CompteEpargne::retirer(double montant) {
+void CompteEpargne::retirer(double montant) {
+    if (montant <= 0) {
+        throw MontantInvalide("Le montant du retrait doit etre positif.");
+    }
     if (montant <= solde) {
         solde -= montant;
         enregistrerOperation("Retrait", montant);
@@ -20,10 +24,8 @@ bool CompteEpargne::retirer(double montant) {
 
         
         std::cout << "Retrait de " << montant << " effectue. Nouveau solde: " << solde << std::endl;
-        return true;
     } else {
-        std::cout << "Erreur: Solde insuffisant." << std::endl;
-        return false;
+        throw SoldeInsuffisant("Erreur: Solde insuffisant.");
     }
 }
 

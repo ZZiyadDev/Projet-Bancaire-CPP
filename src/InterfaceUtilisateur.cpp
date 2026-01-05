@@ -8,6 +8,7 @@
 #include "Client.h"
 #include "EmployeClient.h"
 #include "Employe.h"
+#include "Exceptions.h"
 #include <iostream>
 #include <limits>
 #include <string>
@@ -98,15 +99,18 @@ void InterfaceUtilisateur::afficherMenuClient(Client* client, CompteManager& com
                     std::cout << "Montant : ";
                     std::cin >> montant;
                     
-                    if (choix == 2) {
-                        comptes[index - 1]->deposer(montant);
-                        printMessage("Depot effectue avec succes.", UI::Colors::GREEN);
-                    } else {
-                        if (comptes[index - 1]->retirer(montant)) {
-                            printMessage("Retrait effectue avec succes.", UI::Colors::GREEN);
+                    try {
+                        if (choix == 2) {
+                            comptes[index - 1]->deposer(montant);
+                            printMessage("Depot effectue avec succes.", UI::Colors::GREEN);
                         } else {
-                            printMessage("Erreur : Solde insuffisant ou montant invalide.", UI::Colors::RED);
+                            comptes[index - 1]->retirer(montant);
+                            printMessage("Retrait effectue avec succes.", UI::Colors::GREEN);
                         }
+                    } catch (const MontantInvalide& e) {
+                        printMessage(e.what(), UI::Colors::RED);
+                    } catch (const SoldeInsuffisant& e) {
+                        printMessage(e.what(), UI::Colors::RED);
                     }
                 } else {
                     printMessage("Numero de compte invalide.", UI::Colors::RED);
@@ -134,8 +138,14 @@ void InterfaceUtilisateur::afficherMenuClient(Client* client, CompteManager& com
                         std::cout << "Montant du virement : ";
                         std::cin >> montant;
                         
-                        comptes[indexSrc - 1]->virementVers(*destCompte, montant);
-                         printMessage("Virement effectue avec succes.", UI::Colors::GREEN);
+                        try {
+                            comptes[indexSrc - 1]->virementVers(*destCompte, montant);
+                            printMessage("Virement effectue avec succes.", UI::Colors::GREEN);
+                        } catch (const MontantInvalide& e) {
+                            printMessage(e.what(), UI::Colors::RED);
+                        } catch (const SoldeInsuffisant& e) {
+                            printMessage(e.what(), UI::Colors::RED);
+                        }
                     } else {
                         printMessage("Erreur : Compte destinataire introuvable.", UI::Colors::RED);
                     }
@@ -427,15 +437,18 @@ void InterfaceUtilisateur::afficherMenuCaissier(Employe* employe, UtilisateurMan
                             std::cout << "Montant : ";
                             std::cin >> montant;
 
-                            if (sousChoix == 2) {
-                                comptes[index - 1]->deposer(montant);
-                                printMessage("Depot effectue par le caissier.", UI::Colors::GREEN);
-                            } else {
-                                if (comptes[index - 1]->retirer(montant)) {
-                                    printMessage("Retrait effectue par le caissier.", UI::Colors::GREEN);
+                            try {
+                                if (sousChoix == 2) {
+                                    comptes[index - 1]->deposer(montant);
+                                    printMessage("Depot effectue par le caissier.", UI::Colors::GREEN);
                                 } else {
-                                    printMessage("Solde insuffisant pour ce retrait.", UI::Colors::RED);
+                                    comptes[index - 1]->retirer(montant);
+                                    printMessage("Retrait effectue par le caissier.", UI::Colors::GREEN);
                                 }
+                            } catch (const MontantInvalide& e) {
+                                printMessage(e.what(), UI::Colors::RED);
+                            } catch (const SoldeInsuffisant& e) {
+                                printMessage(e.what(), UI::Colors::RED);
                             }
                         } else {
                             printMessage("Compte invalide.", UI::Colors::RED);

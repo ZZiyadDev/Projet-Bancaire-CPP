@@ -1,0 +1,144 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usepackage{pgf-umlcd}
+\usetikzlibrary{shapes.geometric, arrows, positioning, shadows}
+\usepackage[a4paper, margin=1in]{geometry}
+
+\title{Diagrammes pour le Projet Bancaire}
+\author{Projet-Bancaire-CPP}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Diagramme de Cas d'Utilisation}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    % System Boundary
+    \node (system) [draw, rectangle, minimum height=11cm, minimum width=9cm, label={[font=\bfseries]north:Syst\"eme Bancaire}] {};
+
+    % Actors
+    \node[actor] (client) at (-4, 6) {Client};
+    \node[actor] (caissier) at (14, 9) {Caissier};
+    \node[actor] (manager) at (14, 5) {Manager};
+    \node[actor] (admin) at (14, 1) {AdminIT};
+
+    % Use Cases
+    \node[usecase] (auth) at (4, 9) {S'authentifier};
+    \node[usecase] (profil) at (1, 7) {Afficher profil};
+    \node[usecase] (solde) at (1, 5.5) {Consulter solde};
+    \node[usecase] (retrait) at (1, 4) {Effectuer un retrait};
+    \node[usecase] (depot) at (1, 2.5) {Effectuer un d\"ep\"ot};
+    \node[usecase] (virement) at (1, 1) {Effectuer un virement};
+
+    \node[usecase] (creerClient) at (7, 7) {Cr\"eer un client};
+    \node[usecase] (ouvrirCompte) at (7, 5.5) {Ouvrir un compte};
+    \node[usecase] (gererEmployes) at (7, 4) {G\"erer les employ\"es};
+    \node[usecase] (rapports) at (7, 2.5) {G\"en\"erer des rapports};
+    \node[usecase] (maintenance) at (7, 1) {G\"erer utilisateurs syst\"eme};
+    
+    % Associations
+    \draw[assoc] (client) -- (auth);
+    \draw[assoc] (client) -- (profil);
+    \draw[assoc] (client) -- (solde);
+    \draw[assoc] (client) -- (retrait);
+    \draw[assoc] (client) -- (depot);
+    \draw[assoc] (client) -- (virement);
+
+    \draw[assoc] (caissier) -- (auth);
+    \draw[assoc] (caissier) -- (creerClient);
+    \draw[assoc] (caissier) -- (ouvrirCompte);
+    
+    \draw[assoc] (manager) -- (auth);
+    \draw[assoc] (manager) -- (gererEmployes);
+    \draw[assoc] (manager) -- (rapports);
+    
+    \draw[assoc] (admin) -- (auth);
+    \draw[assoc] (admin) -- (maintenance);
+
+    % Generalization between actors
+    \draw[generalization] (caissier) -- (manager);
+    % Show that Manager inherits Caissier's capabilities
+    \draw[include] (manager) to (creerClient);
+    \draw[include] (manager) to (ouvrirCompte);
+
+\end{tikzpicture}
+\caption{Diagramme de cas d'utilisation g\"en\"eral du syst\"eme bancaire.}
+\label{fig:usecase}
+\end{figure}
+
+\newpage
+\section{Orchestration des Op\"erations (Flowchart)}
+
+\tikzset{
+    startstop/.style={rectangle, rounded corners, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=red!30, text width=3cm},
+    io/.style={trapezium, trapezium left angle=70, trapezium right angle=110, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=blue!30, text width=3cm},
+    process/.style={rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!30, text width=3.5cm},
+    decision/.style={diamond, aspect=2, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!30, text width=2.5cm},
+    arrow/.style={thick,->,>=stealth}
+}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[node distance=2.5cm, scale=0.8, transform shape]
+    \node (start) [startstop] {D\"ebut};
+    \node (mainMenu) [io, below of=start] {Afficher Menu Principal (Login/Quitter)};
+    \node (loginChoice) [decision, below of=mainMenu, yshift=-1cm] {Choix = Login ?};
+    \node (stop) [startstop, right of=loginChoice, xshift=5cm] {Fin};
+    
+    \node (getCreds) [io, below of=loginChoice, yshift=-1.5cm] {Saisir ID \& Mdp};
+    \node (authService) [process, below of=getCreds] {ServiceAuth v\"erifie via UtilisateurManager};
+    \node (authDecision) [decision, below of=authService, yshift=-1.5cm] {Authentifi\"e ?};
+    
+    \node (authFail) [process, right of=authDecision, xshift=5cm] {Afficher "\"Echec Authentification"};
+    
+    \node (getUserType) [process, below of=authDecision, yshift=-1.5cm] {D\"eterminer type utilisateur (Client, Manager...)};
+    \node (userMenu) [io, below of=getUserType] {Afficher Menu Utilisateur};
+    \node (userAction) [decision, below of=userMenu, yshift=-1.5cm] {Action choisie ?};
+    
+    \node (logout) [process, right of=userAction, xshift=5cm] {D\"econnexion};
+
+    \node (doOperation) [process, below of=userAction, yshift=-2cm] {1. Saisir d\"etails (ex: montant) \\ 2. Appeler le Manager ou Compte appropri\"e};
+    \node (opDecision) [decision, below of=doOperation, yshift=-2cm] {Op\"eration r\"eussie ?};
+    
+    \node (opSuccess) [process, below of=opDecision, yshift=-2cm] {1. Mettre \`a jour BD via BDManager \\ 2. Afficher Succ\`es};
+    \node (opFail) [process, right of=opDecision, xshift=6cm] {1. Capturer Exception (ex: SoldeInsuffisant) \\ 2. Afficher Erreur via InterfaceUtilisateur};
+
+    % Arrows
+    \draw [arrow] (start) -- (mainMenu);
+    \draw [arrow] (mainMenu) -- (loginChoice);
+    \draw [arrow] (loginChoice) -- node[anchor=south] {Non} (stop);
+    \draw [arrow] (loginChoice) -- node[anchor=east] {Oui} (getCreds);
+    \draw [arrow] (getCreds) -- (authService);
+    \draw [arrow] (authService) -- (authDecision);
+    \draw [arrow] (authDecision) -- node[anchor=south] {Non} (authFail);
+    \draw [arrow] (authFail.east) -| ([xshift=1cm]stop.south) |- (mainMenu);
+    
+    \draw [arrow] (authDecision) -- node[anchor=east] {Oui} (getUserType);
+    \draw [arrow] (getUserType) -- (userMenu);
+    \draw [arrow] (userMenu) -- (userAction);
+    
+    \draw [arrow] (userAction) -- node[anchor=south] {Logout} (logout);
+    \draw [arrow] (logout.east) -| ([xshift=1cm]stop.south) |- (mainMenu);
+    
+    \draw [arrow] (userAction) -- node[anchor=east] {Op\"eration} (doOperation);
+    \draw [arrow] (doOperation) -- (opDecision);
+    
+    \draw [arrow] (opDecision) -- node[anchor=east] {Oui} (opSuccess);
+    \draw [arrow] (opDecision) -- node[anchor=south] {Non} (opFail);
+    
+    \draw [arrow] (opSuccess.west) |- (userMenu);
+    \draw [arrow] (opFail.east) -| ([xshift=2cm]opFail.east) |- (userMenu);
+
+\end{tikzpicture}
+\caption{Flowchart du processus d'authentification et d'op\"eration.}
+\label{fig:flowchart}
+\end{figure}
+
+\end{document}

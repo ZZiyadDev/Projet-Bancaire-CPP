@@ -1,0 +1,26 @@
+
+\section{Principes POO mobilisés}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Encapsulation :} Ce principe est rigoureusement appliqué. Les attributs des classes (par exemple, \texttt{solde} dans \texttt{Compte}, \texttt{salaire} dans \texttt{Employe}) sont privés. L'accès et la modification de ces données sont contrôlés exclusivement par des méthodes publiques (accesseurs et mutateurs), garantissant ainsi la cohérence et l'intégrité de l'état des objets. 
+
+  \item \textbf{Héritage et Hiérarchie de Classes :} L'héritage est au cœur de la conception. Il est utilisé pour créer une hiérarchie de classes claire : \texttt{Compte} est la base pour \texttt{CompteCourant} et \texttt{CompteEpargne}. De même, \texttt{Utilisateur} est la base pour \texttt{Client} et \texttt{Employe}, cette dernière servant à son tour de base pour des rôles spécifiques comme \texttt{Manager}, \texttt{Caissier}, et \texttt{AdminIT}. 
+
+  \item \textbf{Héritage Virtuel :} Le projet utilise de manière avancée l'héritage virtuel pour résoudre le "problème du diamant". La classe \texttt{EmployeClient} hérite à la fois de \texttt{Employe} et \texttt{Client}, qui héritent eux-mêmes virtuellement de \texttt{Utilisateur}. Cela garantit qu'un objet \texttt{EmployeClient} ne contienne qu'une seule et unique sous-partie de la classe \texttt{Utilisateur}, évitant ainsi l'ambiguïté et la duplication de données. 
+
+  \item \textbf{Abstraction :} L'abstraction est réalisée à deux niveaux. Au niveau des classes, des classes de base abstraites comme \texttt{Utilisateur} et \texttt{Compte} définissent des interfaces communes avec des fonctions virtuelles pures (ex: \texttt{afficherProfil()}, \texttt{retirer()}), forçant les classes dérivées à fournir une implémentation concrète. Au niveau de l'architecture, le système est abstrait en couches logiques (présentation, logique métier, accès aux données) grâce aux classes \texttt{InterfaceUtilisateur}, aux Managers, et au \texttt{BDManager}. 
+
+  \item \textbf{Polymorphisme :} Le polymorphisme est intensivement utilisé pour manipuler des objets de types différents via une interface commune. Les conteneurs comme \texttt{std::vector<std::unique\_ptr<Utilisateur>>} dans \texttt{UtilisateurManager} permettent de stocker et de traiter des \texttt{Client}s, \texttt{Manager}s, etc., de manière uniforme. L'appel à des méthodes virtuelles (\texttt{virtual}) redéfinies (\texttt{override}) assure que le comportement correct est exécuté à l'exécution (liaison tardive). 
+
+  \item \textbf{Composition sur Agrégation :} Plutôt qu'une simple agrégation, le projet privilégie la composition pour gérer les relations de possession. Les classes \texttt{UtilisateurManager} et \texttt{CompteManager} possèdent et gèrent le cycle de vie des utilisateurs et des comptes via des pointeurs intelligents (\texttt{std::unique\_ptr}). Cela garantit que la mémoire est gérée automatiquement, prévenant les fuites et clarifiant la sémantique de possession. 
+
+  \item \textbf{Patrons de Conception (Design Patterns) :} L'architecture emploie des patrons de conception éprouvés. Le \textbf{Singleton}, utilisé pour la classe \texttt{BDManager}, assure qu'il n'existe qu'une seule instance de connexion à la base de données dans toute l'application. La séparation en Managers et Services s'apparente au principe de \textbf{Séparation des Préoccupations (SoC)}, un fondement des architectures logicielles robustes. 
+
+  \item \textbf{Exceptions personnalisées :} Pour une gestion des erreurs claire et sémantique, le projet définit des exceptions spécifiques (\texttt{CompteIntrouvable}, \texttt{SoldeInsuffisant}). Cela permet de distinguer les différents types d'erreurs d'exécution et de mettre en place des mécanismes de récupération plus fins qu'avec des codes d'erreur ou des exceptions génériques.
+\end{itemize}
+
+\section{Conclusion du chapitre}
+La conception de ce projet bancaire dépasse une simple application des principes orientés objet ; elle témoigne d'une architecture logicielle réfléchie et moderne. En adoptant une \textbf{séparation claire des préoccupations}, le système isole la logique de présentation (\texttt{InterfaceUtilisateur}), la logique métier (\texttt{UtilisateurManager}, \texttt{CompteManager}) et l'accès aux données (\texttt{BDManager}). Cette modularité, renforcée par l'usage de patrons de conception comme le Singleton, n'est pas un simple exercice académique : elle confère au projet une maintenabilité et une évolutivité concrètes.
+
+L'utilisation de fonctionnalités C++ modernes, notamment les \textbf{pointeurs intelligents (\texttt{std::unique\_ptr})} pour la gestion automatique de la mémoire et \textbf{l'héritage virtuel} pour résoudre des cas de figure complexes, démontre une maîtrise qui va au-delà des bases de la POO. Ces choix techniques fiabilisent l'application en prévenant les fuites de mémoire et en assurant une hiérarchie de classes cohérente.
+
+En conclusion, l'architecture mise en place ne se contente pas de structurer le code. Elle le rend plus sûr, plus facile à maintenir et prêt pour des évolutions futures. L'ajout de nouveaux types de comptes, de rôles d'employés ou même le passage à une autre technologie d'interface utilisateur pourrait se faire avec un impact minimal sur le cœur du système, prouvant ainsi la robustesse et la qualité de la conception initiale.

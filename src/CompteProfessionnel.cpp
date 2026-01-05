@@ -1,4 +1,5 @@
 #include "CompteProfessionnel.h"
+#include "Exceptions.h"
 #include <iostream>
 #include <iomanip>
 
@@ -7,15 +8,16 @@ CompteProfessionnel::CompteProfessionnel(const std::string& titulaire, double so
     : Compte(titulaire, soldeInitial), plafondDecouvert(plafond) {}
 
 // Withdraw method
-bool CompteProfessionnel::retirer(double montant) {
+void CompteProfessionnel::retirer(double montant) {
+    if (montant <= 0) {
+        throw MontantInvalide("Le montant du retrait doit être positif.");
+    }
     if (montant <= solde + plafondDecouvert) {
         solde -= montant;
         enregistrerOperation("Retrait", montant);
         std::cout << "Retrait de " << montant << " effectué. Nouveau solde: " << solde << std::endl;
-        return true;
     } else {
-        std::cout << "Retrait impossible : dépasse le plafond autorisé !" << std::endl;
-        return false;
+        throw SoldeInsuffisant("Retrait impossible : dépasse le plafond autorisé !");
     }
 }
 

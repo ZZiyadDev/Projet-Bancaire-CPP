@@ -11,7 +11,7 @@ public:
     CompteProfessionnel(const std::string& titulaire, double soldeInitial, double plafond);
 
     // Override methods
-    bool retirer(double montant) override;
+    void retirer(double montant) override;
     void afficherInfo() const override;
 
     // Destructor

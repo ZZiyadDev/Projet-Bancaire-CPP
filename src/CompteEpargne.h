@@ -12,7 +12,7 @@ class CompteEpargne : public Compte {
         CompteEpargne(std::string t, double sd, double ti) : Compte(t, sd), tauxInteret(ti) {}
     
         //methodes
-        bool retirer(double montant) override;
+        void retirer(double montant) override;
         void afficherInfo() const override;
         void appliquerInteret();
 

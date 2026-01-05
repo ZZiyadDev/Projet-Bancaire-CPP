@@ -11,7 +11,7 @@ class CompteCourant : public Compte {
         CompteCourant(std::string t, double sd, double da) : Compte(t, sd), decouvertAutorise(da) {}
     
         //methodes
-        bool retirer(double montant) override;
+        void retirer(double montant) override;
         void afficherInfo() const override;
 
         //Destructeur

@@ -1,5 +1,6 @@
 #include "Compte.h"
 #include "BDManager.h"
+#include "Exceptions.h"
 #include <ctime>
 #include <sstream>
 
@@ -31,26 +32,23 @@ void Compte::deposer(double montant) {
     if (montant > 0) {
         solde += montant;
         enregistrerOperation("Depot", montant);
-        std::cout << "Déposé: " << montant << ", Nouveau solde: " << solde << std::endl;
+        std::cout << "Depose: " << montant << ", Nouveau solde: " << solde << std::endl;
         std::string query = "UPDATE Comptes SET solde = " + std::to_string(solde) 
                           + " WHERE numCompte = '" + numCompte + "';";
         
         BDManager::getInstance()->executeQuery(query);
     } else {
-        std::cout << "Montant de dépôt invalide." << std::endl;
+        throw MontantInvalide("Le montant du depot doit etre positif.");
     }
 }
 
-bool Compte::virementVers(Compte& destinataire, double montant) {
-    if (this->retirer(montant) == true) {
-        destinataire.deposer(montant);
-        std::cout << "Virement effectue avec succes." << std::endl;
-        return true;
+void Compte::virementVers(Compte& destinataire, double montant) {
+    if (montant <= 0) {
+        throw MontantInvalide("Le montant du virement doit etre positif.");
     }
-    else {
-        std::cout << "Virement echoue." << std::endl;
-        return false;
-    }
+    retirer(montant);
+    destinataire.deposer(montant);
+    std::cout << "Virement effectue avec succes." << std::endl;
 }    
 
 void Compte::afficherHistorique() const {
@@ -59,4 +57,4 @@ void Compte::afficherHistorique() const {
             transaction.afficherDetails();
         }
         std::cout << "-------------------------------------------" << std::endl;
-    }       
+    }              

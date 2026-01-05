@@ -1,0 +1,373 @@
+\chapter{Conception orientée objet}
+
+\section{Choix d’architecture}
+L'architecture de cette application a été conçue pour être modulaire, robuste et évolutive, en s'appuyant sur une séparation claire des préoccupations (Separation of Concerns). Plutôt qu'une approche monolithique, le système est décomposé en trois couches logiques distinctes :
+
+\begin{itemize}
+  \item \textbf{La couche de présentation :} Gérée exclusivement par la classe \texttt{InterfaceUtilisateur}, cette couche est responsable de toutes les interactions avec l'utilisateur via la console. Elle gère l'affichage des menus, la saisie des données et la présentation des informations, isolant ainsi l'interface du reste de la logique applicative.
+
+  \item \textbf{La couche métier (logique applicative) :} C'est le cœur du système. Elle est orchestrée par la classe \texttt{SystemeBancaire}, qui agit comme un médiateur. La logique de gestion des entités est déléguée à des classes de type "Manager" (\texttt{UtilisateurManager}, \texttt{CompteManager}), qui encapsulent les règles de gestion spécifiques aux utilisateurs et aux comptes. Des services spécialisés, comme \texttt{ServiceAuthentification}, y implémentent des fonctionnalités transverses. Cette couche fonctionne indépendamment des détails de l'interface ou du stockage.
+
+  \item \textbf{La couche d’accès aux données :} La persistance des données est assurée par une base de données SQLite. La classe \texttt{BDManager}, implémentée selon le patron de conception Singleton, centralise et gère l'unique connexion à la base de données. Elle abstrait les opérations SQL, offrant une interface simple pour la création des tables et l'exécution des requêtes, et garantissant que le reste de l'application n'a pas besoin de connaître les détails de l'implémentation de la base de données.
+\end{itemize}
+
+Cette architecture en couches, cimentée par les principes de l'orienté objet, garantit que chaque partie du système a un rôle unique et bien défini. Elle favorise une faible dépendance entre les composants, ce qui rend l'application plus facile à maintenir, à tester et à faire évoluer.
+
+\section{Modèle de classes}
+
+\subsection{Classe : Utilisateur}
+\begin{itemize}[leftmargin=*]
+  \item Rôle : \textit{La classe Utilisateur représente une entité abstraite du système bancaire. Elle sert de classe de base polymorphe pour tous les types d'utilisateurs (Clients, Employes). Elle définit les caractéristiques communes, notamment les informations d'identification et le profil de base.}
+  \item Attributs : \textit{identifiant, motDePasse, nom, prenom.}
+  \item Méthodes : 
+        \begin{itemize}[leftmargin=*]
+        \item \textbf{Utilisateur(const std::string& id, const std::string& mdp, const std::string& n, const std::string& p):} \textit{Un constructeur permettant d’initialiser l’identifiant, le mot de passe, le nom et le prénom de l’utilisateur.}
+        \item \textbf{virtual ~Utilisateur():} \textit{Un destructeur virtuel par défaut assurant une destruction correcte des objets dérivés.}
+        \item \textbf{bool verifierMotDePasse(const std::string& mdp) const:} \textit{Une méthode permettant de vérifier si le mot de passe fourni correspond à celui de l'utilisateur.}
+        \item \textbf{const std::string& getIdentifiant() const:} \textit{Retourne l'identifiant de l'utilisateur.}
+        \item \textbf{const std::string& getNom() const:} \textit{Retourne le nom de l'utilisateur.}
+        \item \textbf{const std::string& getPrenom() const:} \textit{Retourne le prénom de l'utilisateur.}
+        \item \textbf{virtual void afficherProfil() const = 0:} \textit{Une méthode virtuelle pure destinée à être redéfinie dans les classes dérivées pour afficher les informations spécifiques au profil.}
+        \item \textbf{virtual std::string getTypeUtilisateur() const = 0:} \textit{Une méthode virtuelle pure permettant d’obtenir le type de l’utilisateur (ex: "Client", "Employe").}
+        \end{itemize} 
+\end{itemize}
+
+\subsection{Classe : Employe}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe Employe est une classe de base abstraite qui hérite virtuellement de Utilisateur. Elle représente un employé de la banque et ajoute des notions spécifiques comme le salaire. Elle sert de parent pour des rôles plus spécialisés comme Manager, Caissier ou AdminIT.}
+\item Attributs : \textit{salaire.} (En plus des attributs hérités de Utilisateur).
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{Employe(const std::string& nom, const std::string& prenom, double salaire, const std::string& identifiant, const std::string& motDePasse):} \textit{Constructeur qui initialise toutes les informations de l'employé.}
+      \item \textbf{double getSalaire() const:} \textit{Retourne le salaire de l'employé.}
+      \item \textbf{void setSalaire(double salaire):} \textit{Met à jour le salaire de l'employé.}
+      \item \textbf{virtual std::string getRole() const:} \textit{Une méthode virtuelle pour obtenir le rôle spécifique de l'employé (ex: "Manager").}
+      \item \textbf{void afficherProfil() const override:}\textit{Implémentation de la méthode pour afficher le profil d'un employé.}
+      \item \textbf{std::string getTypeUtilisateur() const override:}\textit{Retourne la chaîne "Employe".}
+      \end{itemize}
+\end{itemize}
+
+\subsection{Classe : AdminIT}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe AdminIT hérite de Employe et représente un administrateur informatique. Cet utilisateur a des privilèges élevés pour gérer les autres utilisateurs du système.}
+\item Attributs : \textit{niveauAcces.} (En plus des attributs hérités).
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{AdminIT(...):} \textit{Constructeur qui initialise l'administrateur avec son nom, prénom, salaire, niveau d'accès et ses identifiants.}
+      \item \textbf{const std::string& getNiveauAcces() const:} \textit{Retourne le niveau d'accès (ex: "admin").}
+      \item \textbf{void afficher() const override :} \textit{Méthode spécifique pour afficher les détails de l'administrateur.}
+      \item \textbf{std::string getRole() const override :} \textit{Retourne le rôle "AdminIT".}
+      \item \textbf{std::unique_ptr<Utilisateur> creerUtilisateur():} \textit{Fonctionnalité permettant de créer un nouvel utilisateur dans le système.}
+      \item \textbf{std::string supprimerUtilisateur() const:} \textit{Fonctionnalité permettant de supprimer un utilisateur par son identifiant.}
+      \end{itemize}
+\end{itemize}
+
+\subsection{Classe : Manager}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe Manager hérite de Employe et représente un cadre ou un directeur dans la banque. Ce rôle a des responsabilités de supervision, symbolisées ici par le nombre d'employés gérés.}
+\item Attributs : \textit{nombreEmployes.} (En plus des attributs hérités).
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{Manager(...):} \textit{Constructeur qui initialise le manager, y compris le nombre d'employés sous sa responsabilité.}
+      \item \textbf{int getNombreEmployes() const:} \textit{Retourne le nombre d'employés gérés.}
+      \item \textbf{void setNombreEmployes(int nombre):} \textit{Met à jour le nombre d'employés gérés.}
+      \item \textbf{void afficher() const override :} \textit{Méthode redéfinie pour afficher les informations spécifiques au manager.}
+      \item \textbf{std::string getRole() const override :} \textit{Retourne la chaîne "Manager".}
+      \end{itemize}
+\end{itemize}
+
+\subsection{Classe : Caissier}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe Caissier hérite de Employe et représente un caissier de la banque. Il s'agit d'un rôle d'employé avec des permissions spécifiques, moins élevées que celles d'un manager ou d'un administrateur.}
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{Caissier(...):} \textit{Constructeur qui initialise les informations du caissier via le constructeur de la classe Employe.}
+      \item \textbf{void afficher() const override :} \textit{Méthode redéfinie pour afficher les informations spécifiques au caissier.}
+      \item \textbf{std::string getRole() const override :} \textit{Retourne la chaîne "Caissier".}
+      \end{itemize}
+\end{itemize}
+
+\subsection{Classe : EmployeClient}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Cette classe représente un cas particulier d'utilisateur qui est à la fois un employé et un client. Elle utilise l'héritage multiple pour combiner les fonctionnalités des classes Employe et Client. Grâce à l'héritage virtuel de Utilisateur dans les deux parents, il n'y a qu'une seule instance de la classe de base Utilisateur.}
+\item Attributs : \textit{roleSpecifique.} (En plus des attributs hérités des deux parents).
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{EmployeClient(...):} \textit{Constructeur complexe qui initialise les deux classes parentes, Employe et Client.}
+      \item \textbf{void afficherProfil() const override :} \textit{Affiche un profil consolidé qui combine les informations de l'employé et du client.}
+      \item \textbf{std::string getTypeUtilisateur() const override :} \textit{Retourne la chaîne "EmployeClient" pour identifier ce type d'utilisateur unique.}
+      \end{itemize}
+\end{itemize}
+
+\subsection{Classe : Client}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe Client hérite virtuellement de Utilisateur et représente un client de la banque. Elle gère les informations personnelles du client ainsi que la collection de ses comptes bancaires.}
+\item Attributs : \textit{dateNaissance, std::vector<Compte*> comptes.} (En plus des attributs hérités).
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{Client(const std::string& id, const std::string& mdp, ...):} \textit{Constructeur qui initialise les informations du client.}
+      \item \textbf{std::string getTypeUtilisateur() const override:} \textit{Retourne la chaîne "Client".}
+      \item \textbf{void ajouterCompte(Compte* c):} \textit{Ajoute un pointeur vers un compte au vecteur de comptes du client. L'utilisation de pointeurs est essentielle pour gérer polymorphiquement différents types de comptes (CompteCourant, CompteEpargne).}
+      \item \textbf{const std::vector<Compte*>& getComptes() const:} \textit{Retourne une référence constante vers le vecteur de pointeurs de comptes.} 
+      \item \textbf{void afficherProfil() const override :}\textit{Affiche le profil complet du client.}
+      \item \textbf{~Client():}\textit{Le destructeur est simple car la possession et la gestion de la mémoire des comptes sont déléguées à la classe CompteManager pour éviter les fuites mémoires.}
+      \end{itemize}
+\end{itemize} 
+
+\subsection{Classe : Compte}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe Compte est une classe de base abstraite pour les comptes bancaires. Elle définit l'interface commune pour les opérations bancaires et gère un solde, un historique de transactions, et un numéro de compte unique.}
+\item Attributs : \textit{numCompte, titulaire, solde, std::vector<Transaction> historique.}
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{Compte(std::string t, double sd):} \textit{Constructeur initialisant le titulaire et le solde.}
+      \item \textbf{virtual void afficherInfo() const = 0 :} \textit{Méthode virtuelle pure pour afficher les informations spécifiques au type de compte.}
+      \item \textbf{virtual void retirer(double montant) = 0 :} \textit{Méthode virtuelle pure pour le retrait. Le type de retour est \texttt{void}, ce qui implique que la gestion des erreurs (ex: solde insuffisant) se fait par un autre mécanisme, comme les exceptions (voir la section sur les Exceptions).}
+      \item \textbf{virtual void deposer(double montant):} \textit{Méthode virtuelle pour déposer de l'argent sur le compte.}
+      \item \textbf{double getSolde() const:} \textit{Retourne le solde actuel.}
+      \item \textbf{virtual void virementVers(Compte& destinataire, double montant):}\textit{Méthode virtuelle pour effectuer un virement. Le retour est également \texttt{void}.}
+      \item \textbf{void afficherHistorique() const:} \textit{Affiche l'historique des transactions du compte.}
+      \item \textbf{const std::string& getNumCompte() const:} \textit{Retourne le numéro du compte.}
+      \item \textbf{virtual ~Compte():} \textit{Destructeur virtuel pour la gestion correcte de la mémoire des classes dérivées.}
+      \end{itemize}
+\end{itemize} 
+
+\subsection{Classe : CompteCourant}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Hérite de Compte. Représente un compte chèque standard avec une autorisation de découvert.}
+\item Attributs : \textit{decouvertAutorise.}
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{CompteCourant(std::string t, double sd, double da):} \textit{Constructeur initialisant le compte avec un découvert autorisé.}
+      \item \textbf{void retirer(double montant) override:} \textit{Redéfinition de la méthode de retrait, autorisant un solde négatif jusqu'à la limite du découvert.}
+      \item \textbf{void afficherInfo() const override:} \textit{Affiche les informations du compte, y compris le découvert autorisé.}
+      \end{itemize} 
+\end{itemize} 
+
+\subsection{Classe : CompteEpargne}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Hérite de Compte. Représente un compte d'épargne avec un taux d'intérêt. Les retraits sont généralement plus restrictifs.}
+\item Attributs : \textit{tauxInteret.}
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{CompteEpargne(std::string t, double sd, double ti):} \textit{Constructeur initialisant le compte avec un taux d'intérêt.}
+      \item \textbf{void retirer(double montant) override:} \textit{Redéfinition de la méthode de retrait, qui ne permet pas un solde négatif.}
+      \item \textbf{void afficherInfo() const override:} \textit{Affiche les informations du compte, y compris le taux d'intérêt.}
+      \item \textbf{void appliquerInteret():} \textit{Calcule et ajoute les intérêts au solde.} 
+      \end{itemize}
+\end{itemize} 
+
+\subsection{Classes de l'Architecture}
+
+\subsubsection{Classe : SystemeBancaire}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe SystemeBancaire est l'orchestrateur principal de l'application. Au lieu de gérer directement les données, elle coordonne plusieurs composants spécialisés (Managers, Services) pour faire fonctionner le système. Elle est responsable du lancement de l'application et de la gestion des sessions utilisateur.}
+\item Attributs : \textit{UtilisateurManager, CompteManager, ServiceAuthentification, InterfaceUtilisateur.}
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{SystemeBancaire():} \textit{Constructeur qui initialise les différents modules (managers et services).}
+      \item \textbf{void lancer():} \textit{La méthode principale qui démarre la boucle de l'application, gère l'authentification et lance la session de l'utilisateur appropriée.}
+      \item \textbf{void sessionAdmin(AdminIT* admin), void sessionClient(Client* client), ...:} \textit{Méthodes privées qui gèrent le menu et les actions spécifiques à chaque type d'utilisateur connecté.}
+      \end{itemize}
+\end{itemize} 
+
+\subsubsection{Classe : UtilisateurManager}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Gère le cycle de vie des objets Utilisateur. Centralise le chargement, l'accès, l'ajout et la suppression des utilisateurs, en interagissant avec la base de données.}
+\item Attributs : \textit{std::vector<std::unique\_ptr<Utilisateur>> utilisateurs.}
+\item Méthodes : \textit{chargerDonnees(), getUtilisateur(), ajouterNouveauClient(), supprimerUtilisateur(), ...}
+\end{itemize}
+
+\subsubsection{Classe : CompteManager}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Gère le cycle de vie des objets Compte. Gère le chargement, la recherche et la création de comptes, en les associant aux bons utilisateurs.}
+\item Attributs : \textit{std::vector<std::unique\_ptr<Compte>> listeComptes.}
+\item Méthodes : \textit{chargerDonnees(), trouverCompte(), ouvrirNouveauCompte(), ...}
+\end{itemize}
+
+\subsubsection{Classe : BDManager}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Implémentée en tant que Singleton, cette classe gère la connexion à la base de données SQLite. Elle est responsable de l'ouverture de la connexion, de l'exécution des requêtes SQL et de la création du schéma de la base de données au premier lancement.}
+\item Méthodes : \textit{static BDManager* getInstance(), executeQuery(), setupTables(), ...}
+\end{itemize}
+
+\subsubsection{Classe : ServiceAuthentification}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Fournit une logique d'authentification simple. Elle vérifie les identifiants fournis par un utilisateur par rapport à la liste des utilisateurs chargés par l'UtilisateurManager.}
+\item Méthodes : \textit{Utilisateur* authentifier(...).}
+\end{itemize}
+
+\subsubsection{Classe : InterfaceUtilisateur}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Gère toutes les interactions avec la console. Elle est responsable de l'affichage des menus, des en-têtes, des messages d'erreur et d'information, en utilisant des couleurs pour améliorer l'expérience utilisateur. Cela sépare complètement la logique de l'application de sa présentation.}
+\item Méthodes : \textit{afficherMenuPrincipal(), afficherMenuClient(), printHeader(), printMessage(), ...}
+\end{itemize}
+
+\subsection{Classe : Transaction }
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{La classe Transaction représente une opération financière. Elle stocke les détails de chaque transaction (type, date, montant) et est utilisée pour construire l'historique des opérations d'un compte.}
+\item Attributs : \textit{type, date, montant.}
+\item Méthodes : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{Transaction(const std::string& t, const std::string& d, float m):} \textit{Constructeur qui initialise les détails de la transaction.}
+      \item \textbf{getType() const, getDate() const, getMontant() const:} \textit{Accesseurs pour les attributs.}
+      \item \textbf{afficherDetails() const:} \textit{Affiche les détails de la transaction.}
+      \end{itemize}
+\end{itemize}
+
+\subsection{Gestion des Erreurs (Exceptions)}
+\begin{itemize}[leftmargin=*]
+\item Rôle : \textit{Le projet utilise un système d'exceptions personnalisées pour gérer les erreurs d'exécution de manière robuste. Ces classes héritent de \texttt{std::runtime\_error}.}
+\item Classes d'exception : 
+     \begin{itemize}[leftmargin=*]
+      \item \textbf{CompteIntrouvable:} \textit{Levée lorsqu'une opération tente d'accéder à un compte qui n'existe pas.}
+      \item \textbf{SoldeInsuffisant:} \textit{Levée lors d'un retrait ou d'un virement si les fonds ne sont pas suffisants.}
+      \item \textbf{MontantInvalide:} \textit{Levée si un montant fourni pour une opération est invalide (par exemple, négatif).}
+      \end{itemize}
+\end{itemize}
+
+\section{Principes POO mobilisés}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Encapsulation :} Ce principe est rigoureusement appliqué. Les attributs des classes (par exemple, \texttt{solde} dans \texttt{Compte}, \texttt{salaire} dans \texttt{Employe}) sont privés. L'accès et la modification de ces données sont contrôlés exclusivement par des méthodes publiques (accesseurs et mutateurs), garantissant ainsi la cohérence et l'intégrité de l'état des objets.
+
+  \item \textbf{Héritage et Hiérarchie de Classes :} L'héritage est au cœur de la conception. Il est utilisé pour créer une hiérarchie de classes claire : \texttt{Compte} est la base pour \texttt{CompteCourant} et \texttt{CompteEpargne}. De même, \texttt{Utilisateur} est la base pour \texttt{Client} et \texttt{Employe}, cette dernière servant à son tour de base pour des rôles spécifiques comme \texttt{Manager}, \texttt{Caissier}, et \texttt{AdminIT}.
+
+  \item \textbf{Héritage Virtuel :} Le projet utilise de manière avancée l'héritage virtuel pour résoudre le "problème du diamant". La classe \texttt{EmployeClient} hérite à la fois de \texttt{Employe} et \texttt{Client}, qui héritent eux-mêmes virtuellement de \texttt{Utilisateur}. Cela garantit qu'un objet \texttt{EmployeClient} ne contienne qu'une seule et unique sous-partie de la classe \texttt{Utilisateur}, évitant ainsi l'ambiguïté et la duplication de données.
+
+  \item \textbf{Abstraction :} L'abstraction est réalisée à deux niveaux. Au niveau des classes, des classes de base abstraites comme \texttt{Utilisateur} et \texttt{Compte} définissent des interfaces communes avec des fonctions virtuelles pures (ex: \texttt{afficherProfil()}, \texttt{retirer()}), forçant les classes dérivées à fournir une implémentation concrète. Au niveau de l'architecture, le système est abstrait en couches logiques (présentation, logique métier, accès aux données) grâce aux classes \texttt{InterfaceUtilisateur}, aux Managers, et au \texttt{BDManager}.
+
+  \item \textbf{Polymorphisme :} Le polymorphisme est intensivement utilisé pour manipuler des objets de types différents via une interface commune. Les conteneurs comme \texttt{std::vector<std::unique\_ptr<Utilisateur>>} dans \texttt{UtilisateurManager} permettent de stocker et de traiter des \texttt{Client}s, \texttt{Manager}s, etc., de manière uniforme. L'appel à des méthodes virtuelles (\texttt{virtual}) redéfinies (\texttt{override}) assure que le comportement correct est exécuté à l'exécution (liaison tardive).
+
+  \item \textbf{Composition sur Agrégation :} Plutôt qu'une simple agrégation, le projet privilégie la composition pour gérer les relations de possession. Les classes \texttt{UtilisateurManager} et \texttt{CompteManager} possèdent et gèrent le cycle de vie des utilisateurs et des comptes via des pointeurs intelligents (\texttt{std::unique\_ptr}). Cela garantit que la mémoire est gérée automatiquement, prévenant les fuites et clarifiant la sémantique de possession.
+
+  \item \textbf{Patrons de Conception (Design Patterns) :} L'architecture emploie des patrons de conception éprouvés. Le \textbf{Singleton}, utilisé pour la classe \texttt{BDManager}, assure qu'il n'existe qu'une seule instance de connexion à la base de données dans toute l'application. La séparation en Managers et Services s'apparente au principe de \textbf{Séparation des Préoccupations (SoC)}, un fondement des architectures logicielles robustes.
+
+  \item \textbf{Exceptions personnalisées :} Pour une gestion des erreurs claire et sémantique, le projet définit des exceptions spécifiques (\texttt{CompteIntrouvable}, \texttt{SoldeInsuffisant}). Cela permet de distinguer les différents types d'erreurs d'exécution et de mettre en place des mécanismes de récupération plus fins qu'avec des codes d'erreur ou des exceptions génériques.
+\end{itemize}
+
+\section{Conclusion du chapitre}
+La conception de ce projet bancaire dépasse une simple application des principes orientés objet ; elle témoigne d'une architecture logicielle réfléchie et moderne. En adoptant une \textbf{séparation claire des préoccupations}, le système isole la logique de présentation (\texttt{InterfaceUtilisateur}), la logique métier (\texttt{UtilisateurManager}, \texttt{CompteManager}) et l'accès aux données (\texttt{BDManager}). Cette modularité, renforcée par l'usage de patrons de conception comme le Singleton, n'est pas un simple exercice académique : elle confère au projet une maintenabilité et une évolutivité concrètes.
+
+L'utilisation de fonctionnalités C++ modernes, notamment les \textbf{pointeurs intelligents (\texttt{std::unique\_ptr})} pour la gestion automatique de la mémoire et \textbf{l'héritage virtuel} pour résoudre des cas de figure complexes, démontre une maîtrise qui va au-delà des bases de la POO. Ces choix techniques fiabilisent l'application en prévenant les fuites de mémoire et en assurant une hiérarchie de classes cohérente.
+
+En conclusion, l'architecture mise en place ne se contente pas de structurer le code. Elle le rend plus sûr, plus facile à maintenir et prêt pour des évolutions futures. L'ajout de nouveaux types de comptes, de rôles d'employés ou même le passage à une autre technologie d'interface utilisateur pourrait se faire avec un impact minimal sur le cœur du système, prouvant ainsi la robustesse et la qualité de la conception initiale.
+
+\chapter{Implémentation en C++}
+\section{Organisation du projet}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Arborescence des fichiers :} Pour des raisons de simplicité, tous les fichiers du projet (\texttt{.h}, \texttt{.cpp}, et la base de données \texttt{.db}) sont regroupés dans un seul répertoire \texttt{src/}. Dans un projet d'envergure, il serait recommandé de les séparer, par exemple avec les en-têtes dans \texttt{include/}, les sources dans \texttt{src/}, et la base de données dans \texttt{data/}.
+  \item \textbf{Fichiers principaux :} L'architecture s'articule autour des fichiers suivants :
+    \begin{itemize}
+        \item \texttt{main.cpp} : Point d'entrée de l'application, qui instancie et lance le \texttt{SystemeBancaire}.
+        \item \texttt{SystemeBancaire.h/.cpp} : Classe centrale qui orchestre les différentes couches de l'application.
+        \item \texttt{InterfaceUtilisateur.h/.cpp} : Gère l'affichage des menus et les interactions avec l'utilisateur (couche présentation).
+        \item \texttt{UtilisateurManager.h/.cpp} et \texttt{CompteManager.h/.cpp} : Gèrent la logique métier pour les utilisateurs et les comptes.
+        \item \texttt{BDManager.h} : Assure la connexion et la communication avec la base de données SQLite (couche données).
+        \item \texttt{Utilisateur.h} et \texttt{Compte.h} : Fichiers définissant les interfaces des classes de base abstraites.
+        \item \texttt{Exceptions.h} : Définit les exceptions personnalisées pour la gestion des erreurs.
+    \end{itemize}
+\end{itemize}
+
+\section{Extraits de code commentés}
+
+\subsection{Création d'objet et persistance}
+Cet extrait de \texttt{UtilisateurManager.cpp} illustre comment un nouvel objet \texttt{Client} est créé et sauvegardé en base de données.
+\begin{lstlisting}[language=C++]
+void UtilisateurManager::ajouterNouveauClient(string nom, string prenom, string dateN) {
+    // 1. Generer un ID unique et un mot de passe par defaut pour le client.
+    string id = genererIdClient();
+    string defaultPassword = "1234";
+    
+    // 2. Preparer la requete SQL parametree pour eviter les injections SQL.
+    string query = "INSERT INTO Users (id, mdp, nom, prenom, type, dateNaissance) VALUES (?, ?, ?, ?, 'Client', ?);";
+    vector<string> params = {id, defaultPassword, nom, prenom, dateN};
+
+    // 3. Executer la requete via le singleton BDManager.
+    if (BDManager::getInstance()->executePrepared(query, params)) {
+        // 4. Si la sauvegarde en BD reussit, creer l'objet en memoire.
+        auto newClient = make_unique<Client>(id, defaultPassword, nom, prenom, dateN);
+        // 5. Ajouter le nouveau client (via son pointeur intelligent) au vecteur polymorphique.
+        utilisateurs.push_back(move(newClient));
+        cout << "Client cree avec succes. ID : " << id << endl;
+    } else {
+        cout << "Erreur SQL: Impossible de creer le client."
+    }
+}
+\end{lstlisting}
+
+\subsection{Chargement polymorphique des données}
+Le code suivant, tiré de \texttt{UtilisateurManager::chargerDonnees()}, montre comment les différents types d'utilisateurs sont chargés depuis la base de données et instanciés dans leur classe respective grâce au polymorphisme.
+\begin{lstlisting}[language=C++]
+// Boucle de lecture des resultats de la requete SELECT sur la table Users...
+while (sqlite3_step(stmt) == SQLITE_ROW) {
+    // ... recuperation des donnees communes (id, nom, type, etc.) ...
+    string type = (const char*)sqlite3_column_text(stmt, 3);
+    string role = "";
+    if (type != "Client") {
+        const char* roleTxt = (const char*)sqlite3_column_text(stmt, 7);
+        role = roleTxt ? roleTxt : "";
+    }
+
+    // Aiguillage en fonction du type et du role pour creer le bon objet
+    if (type == "Client") {
+        utilisateurs.push_back(make_unique<Client>(...));
+    } else if (type == "Employe") {
+        double salaire = sqlite3_column_double(stmt, 6);
+        if (role == "Admin") {
+            utilisateurs.push_back(make_unique<AdminIT>(...));
+        } else if (role == "Manager") {
+            utilisateurs.push_back(make_unique<Manager>(...));
+        } else if (role == "Caissier") {
+            utilisateurs.push_back(make_unique<Caissier>(...));
+        }
+    } // ... etc. pour EmployeClient
+}
+\end{lstlisting}
+
+\subsection{Gestion des exceptions}
+L'exemple ci-dessous montre la chaîne complète de gestion des exceptions : le lancement dans la couche métier et la capture dans la couche de présentation.
+
+\subsubsection{Lancement de l'exception}
+Dans \texttt{CompteCourant::retirer()}, une exception est levée si une règle métier est violée.
+\begin{lstlisting}[language=C++]
+void CompteCourant::retirer(double montant) {
+    // Verification que le montant est positif
+    if (montant <= 0) {
+        throw MontantInvalide("Le montant du retrait doit etre positif.");
+    }
+    // Verification que le solde autorise le retrait (solde + decouvert)
+    if(solde + decouvertAutorise >= montant){
+        solde -= montant;
+        enregistrerOperation("Retrait", montant);
+        // ... mise a jour de la base de donnees ...
+    }
+    else{
+        // Levee d'une exception specifique si la regle n'est pas respectee
+        throw SoldeInsuffisant("Erreur: Solde insuffisant (depasse le decouvert).");
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Capture de l'exception}
+Dans \texttt{InterfaceUtilisateur::afficherMenuClient()}, le bloc \texttt{try...catch} intercepte l'exception et affiche un message clair à l'utilisateur, sans faire planter l'application.
+\begin{lstlisting}[language=C++]
+// ... L'utilisateur choisit de faire un retrait ...
+double montant;
+std::cout << "Montant : ";
+std::cin >> montant;
+
+try {
+    // Tentative d'execution de l'operation qui peut lever une exception
+    comptes[index - 1]->retirer(montant);
+    printMessage("Retrait effectue avec succes.", UI::Colors::GREEN);
+} 
+// Capture specifique des exceptions attendues
+catch (const MontantInvalide& e) {
+    printMessage(e.what(), UI::Colors::RED);
+} catch (const SoldeInsuffisant& e) {
+    printMessage(e.what(), UI::Colors::RED);
+}
+\end{lstlisting}
+
+\section{Conclusion du chapitre}
+L'implémentation en C++ traduit fidèlement la conception orientée objet en une application fonctionnelle et robuste. L'organisation du code en couches logiques, la gestion sécurisée de la mémoire avec les pointeurs intelligents et le traitement propre des erreurs via des exceptions personnalisées sont les piliers qui garantissent la solidité et la maintenabilité du système bancaire.

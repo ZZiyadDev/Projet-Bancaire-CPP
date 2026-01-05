@@ -5,6 +5,7 @@
 #include "Client.h"
 #include "EmployeClient.h"
 #include <iostream>
+#include "Exceptions.h"
 
 SystemeBancaire::SystemeBancaire() {
     // The managers are initialized in the member initializer list.
@@ -41,30 +42,44 @@ void SystemeBancaire::lancer() {
         Utilisateur* user = serviceAuthentification.authentifier(login, pass, utilisateurManager.getAllUtilisateurs());
 
         if (user) {
-            interfaceUtilisateur.printMessage("\nConnexion reussie : " + user->getPrenom() + " " + user->getNom(), UI::Colors::GREEN);
-            interfaceUtilisateur.pause();
+            try {
+                interfaceUtilisateur.printMessage("\nConnexion reussie : " + user->getPrenom() + " " + user->getNom(), UI::Colors::GREEN);
+                interfaceUtilisateur.pause();
 
-            if (auto* admin = dynamic_cast<AdminIT*>(user)) {
-                interfaceUtilisateur.afficherMenuAdmin(admin, utilisateurManager); 
-            }
-            else if (auto* manager = dynamic_cast<Manager*>(user)) {
-                interfaceUtilisateur.afficherMenuManager(manager, utilisateurManager);
-            }
-            else if (auto* caissier = dynamic_cast<Caissier*>(user)) {
-                interfaceUtilisateur.afficherMenuCaissier(caissier, utilisateurManager, compteManager);
-            }
-            else if (auto* ec = dynamic_cast<EmployeClient*>(user)) {
-                interfaceUtilisateur.afficherMenuEmployeClient(ec, utilisateurManager, compteManager);
-            }
-            else if (auto* client = dynamic_cast<Client*>(user)) {
-                interfaceUtilisateur.afficherMenuClient(client, compteManager);
-            }
-            else if (auto* emp = dynamic_cast<Employe*>(user)) {
-                interfaceUtilisateur.afficherMenuEmploye(emp, utilisateurManager, compteManager);
-            }
-            else {
-                 interfaceUtilisateur.printMessage("Erreur: Type d'utilisateur inconnu.", UI::Colors::RED);
-                 interfaceUtilisateur.pause();
+                if (auto* admin = dynamic_cast<AdminIT*>(user)) {
+                    interfaceUtilisateur.afficherMenuAdmin(admin, utilisateurManager); 
+                }
+                else if (auto* manager = dynamic_cast<Manager*>(user)) {
+                    interfaceUtilisateur.afficherMenuManager(manager, utilisateurManager);
+                }
+                else if (auto* caissier = dynamic_cast<Caissier*>(user)) {
+                    interfaceUtilisateur.afficherMenuCaissier(caissier, utilisateurManager, compteManager);
+                }
+                else if (auto* ec = dynamic_cast<EmployeClient*>(user)) {
+                    interfaceUtilisateur.afficherMenuEmployeClient(ec, utilisateurManager, compteManager);
+                }
+                else if (auto* client = dynamic_cast<Client*>(user)) {
+                    interfaceUtilisateur.afficherMenuClient(client, compteManager);
+                }
+                else if (auto* emp = dynamic_cast<Employe*>(user)) {
+                    interfaceUtilisateur.afficherMenuEmploye(emp, utilisateurManager, compteManager);
+                }
+                else {
+                     interfaceUtilisateur.printMessage("Erreur: Type d'utilisateur inconnu.", UI::Colors::RED);
+                     interfaceUtilisateur.pause();
+                }
+            } catch (const CompteIntrouvable& e) {
+                interfaceUtilisateur.printMessage(std::string("Erreur : ") + e.what(), UI::Colors::RED);
+                interfaceUtilisateur.pause();
+            } catch (const SoldeInsuffisant& e) {
+                interfaceUtilisateur.printMessage(std::string("Erreur : ") + e.what(), UI::Colors::RED);
+                interfaceUtilisateur.pause();
+            } catch (const MontantInvalide& e) {
+                interfaceUtilisateur.printMessage(std::string("Erreur : ") + e.what(), UI::Colors::RED);
+                interfaceUtilisateur.pause();
+            } catch (const std::exception& e) {
+                interfaceUtilisateur.printMessage(std::string("Erreur inattendue : ") + e.what(), UI::Colors::RED);
+                interfaceUtilisateur.pause();
             }
         } else {
             interfaceUtilisateur.printMessage("\n[!] Identifiants incorrects.", UI::Colors::RED);
