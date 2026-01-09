@@ -13,6 +13,7 @@ public:
     // Override methods
     void retirer(double montant) override;
     void afficherInfo() const override;
+    void afficher(std::ostream& os) const override;
 
     // Destructor
     ~CompteProfessionnel() override;

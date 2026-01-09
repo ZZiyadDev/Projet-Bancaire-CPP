@@ -57,4 +57,29 @@ void Compte::afficherHistorique() const {
             transaction.afficherDetails();
         }
         std::cout << "-------------------------------------------" << std::endl;
-    }              
+    }
+
+// Implementations for operator overloading
+
+// Surcharge operator<<
+std::ostream& operator<<(std::ostream& os, const Compte& c) {
+    c.afficher(os);
+    return os;
+}
+
+// Surcharge operator+=
+Compte& Compte::operator+=(double montant) {
+    deposer(montant);
+    return *this;
+}
+
+// Surcharge operator-=
+Compte& Compte::operator-=(double montant) {
+    retirer(montant);
+    return *this;
+}
+
+// Surcharge operator==
+bool Compte::operator==(const Compte& autre) const {
+    return this->numCompte == autre.numCompte;
+}              

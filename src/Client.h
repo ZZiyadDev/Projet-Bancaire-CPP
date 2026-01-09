@@ -32,14 +32,18 @@ public:
     }
 
     // Affichage du profil client
+    void afficher(std::ostream& os) const override {
+        os << "\n=== Profil Client ===\n"
+           << "Nom: " << nom
+           << "\nPrenom: " << prenom
+           << "\nDate de naissance: " << dateNaissance
+           << "\nIdentifiant: " << identifiant
+           << "\nNombre de comptes: " << comptes.size()
+           << "\n";
+    }
+
     void afficherProfil() const override {
-        std::cout << "\n=== Profil Client ===\n";
-        std::cout << "Nom: " << nom
-                  << "\nPrenom: " << prenom
-                  << "\nDate de naissance: " << dateNaissance
-                  << "\nIdentifiant: " << identifiant
-                  << "\nNombre de comptes: " << comptes.size()
-                  << "\n";
+        afficher(std::cout);
     }
 
     ~Client() {

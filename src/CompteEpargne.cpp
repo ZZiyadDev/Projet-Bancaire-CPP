@@ -5,10 +5,14 @@
 
 
 void CompteEpargne::afficherInfo() const {
-    std::cout << "Compte Epargne - Titulaire: " << titulaire 
-              << ", Solde: " << solde 
-              << ", Taux d'Interet: " << tauxInteret * 100 << "%" 
-              << std::endl;
+    afficher(std::cout);
+}
+
+void CompteEpargne::afficher(std::ostream& os) const {
+    os << "Compte Epargne - Titulaire: " << titulaire 
+       << ", Solde: " << solde 
+       << ", Taux d'Interet: " << tauxInteret * 100 << "%" 
+       << std::endl;
 }
 
 void CompteEpargne::retirer(double montant) {

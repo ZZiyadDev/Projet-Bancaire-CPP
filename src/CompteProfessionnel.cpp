@@ -23,10 +23,14 @@ void CompteProfessionnel::retirer(double montant) {
 
 // Display account info
 void CompteProfessionnel::afficherInfo() const {
-    std::cout << "[Compte Professionnel] Num: " << numCompte
-              << " | Titulaire: " << titulaire
-              << " | Solde: " << solde
-              << " | Plafond Découvert: " << plafondDecouvert << std::endl;
+    afficher(std::cout);
+}
+
+void CompteProfessionnel::afficher(std::ostream& os) const {
+    os << "[Compte Professionnel] Num: " << numCompte
+       << " | Titulaire: " << titulaire
+       << " | Solde: " << solde
+       << " | Plafond Découvert: " << plafondDecouvert << std::endl;
 }
 
 // Destructor

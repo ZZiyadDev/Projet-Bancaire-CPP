@@ -13,6 +13,7 @@ class CompteCourant : public Compte {
         //methodes
         void retirer(double montant) override;
         void afficherInfo() const override;
+        void afficher(std::ostream& os) const override;
 
         //Destructeur
         ~CompteCourant() override {}

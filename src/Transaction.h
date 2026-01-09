@@ -27,4 +27,5 @@ class Transaction {
     }
     
 
+    friend std::ostream& operator<<(std::ostream& os, const Transaction& t);
 };

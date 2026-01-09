@@ -46,4 +46,16 @@ class Compte{
         
         //destructeur virtuel
         virtual ~Compte() {}
+
+        // Surcharge d'opérateurs
+        virtual void afficher(std::ostream& os) const = 0;
+        
+        // Operateurs arithmétiques pour dépot/retrait
+        Compte& operator+=(double montant);
+        Compte& operator-=(double montant);
+
+        // Operateur de comparaison
+        bool operator==(const Compte& autre) const;
+
+        friend std::ostream& operator<<(std::ostream& os, const Compte& c);
 };

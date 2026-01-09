@@ -4,10 +4,14 @@
 #include <iostream>
 
     void CompteCourant::afficherInfo() const  {
-    std::cout << "Compte Courant - Titulaire: " << titulaire 
-              << ", Solde: " << solde 
-              << ", Decouvert Autorise: " << decouvertAutorise 
-              << std::endl;
+        afficher(std::cout);
+    }
+    
+    void CompteCourant::afficher(std::ostream& os) const {
+        os << "Compte Courant - Titulaire: " << titulaire 
+           << ", Solde: " << solde 
+           << ", Decouvert Autorise: " << decouvertAutorise 
+           << std::endl;
     }
     
     void CompteCourant::retirer(double montant) {

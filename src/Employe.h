@@ -20,6 +20,7 @@ public:
 
     // Virtual methods
     virtual void afficher() const;
+    virtual void afficher(std::ostream& os) const override;
     virtual std::string getRole() const;
     virtual void afficherProfil() const;
     virtual std::string getTypeUtilisateur() const override;

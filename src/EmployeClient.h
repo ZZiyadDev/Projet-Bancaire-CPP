@@ -18,6 +18,7 @@ public:
     // Overrides
     void afficherProfil() const override;
     std::string getTypeUtilisateur() const override;
+    void afficher(std::ostream& os) const override;
 
     ~EmployeClient() override = default;
 };

@@ -37,4 +37,8 @@ public:
 
     virtual void afficherProfil() const = 0;
     virtual std::string getTypeUtilisateur() const = 0;
+
+    virtual void afficher(std::ostream& os) const = 0;
+    
+    friend std::ostream& operator<<(std::ostream& os, const Utilisateur& u);
 };

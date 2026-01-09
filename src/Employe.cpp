@@ -17,10 +17,14 @@ void Employe::setSalaire(double salaire)  {
 }
 
 void Employe::afficher() const {
-    std::cout << "Identifiant: " << identifiant
-              << " | Nom: " << nom
-              << " | Prenom: " << prenom
-              << " | Salaire: " << salaire << std::endl;
+    afficher(std::cout);
+}
+
+void Employe::afficher(std::ostream& os) const {
+    os << "Identifiant: " << identifiant
+       << " | Nom: " << nom
+       << " | Prenom: " << prenom
+       << " | Salaire: " << salaire << std::endl;
 }
 
 std::string Employe::getRole() const {

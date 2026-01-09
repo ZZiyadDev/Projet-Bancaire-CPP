@@ -25,3 +25,11 @@ void EmployeClient::afficherProfil() const {
 std::string EmployeClient::getTypeUtilisateur() const {
     return "EmployeClient";
 }
+
+void EmployeClient::afficher(std::ostream& os) const {
+    os << "[EmployeClient] Identifiant: " << getIdentifiant()
+       << " | Nom: " << getNom()
+       << " | Role: " << roleSpecifique
+       << " | Salaire: " << getSalaire() 
+       << " | Comptes: " << getComptes().size() << std::endl;
+}
